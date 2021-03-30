@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Archipelago LttP Client</title>
+    <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+    <link rel="stylesheet" href="styles/index.css" />
+    <script type="application/ecmascript" src="assets/sidebar.js"></script>
+    <script type="application/ecmascript" src="assets/header.js"></script>
+</head>
+<body>
+    <div id="main-content">
+        <div id="header">
+            <table>
+                <tr>
+                    <td><label for="snes-device">SNES Device:</label></td>
+                    <td>
+                        <select id="snes-device" disabled>
+                            <option>Waiting for devices...</option>
+                        </select>
+                    </td>
+                </tr>
+                <tr>
+                    <td>Status:</td>
+                    <td id="snes-device-status" class="disconnected">Not Connected</td>
+                </tr>
+            </table>
+            <table>
+                <tr>
+                    <td><label for="server-address">Server:</label></td>
+                    <td><input id="server-address" /></td>
+                </tr>
+                <tr>
+                    <td>Status:</td>
+                    <td id="server-status" class="disconnected">Not Connected</td>
+                </tr>
+            </table>
+            <div class="spacer"></div>
+            <div>
+                <table>
+                    <tr>
+                        <td>Text Size:</td>
+                        <td>
+                            <button id="reduce-text-size">-</button>
+                            <span id="current-text-size">12</span>
+                            <button id="increase-text-size">+</button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><label for="local-items-only">Only show my items:</label></td>
+                        <td><input type="checkbox" id="local-items-only" /></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div id="console-output-wrapper">
+            <div class="console-output">There will be stuff here, eventually!</div>
+        </div>
+        <div id="console-input-wrapper">
+            <label for="console-input">Command:</label>
+            <input id="console-input" />
+        </div>
+    </div>
+    <div id="sidebar">
+        <button id="sidebar-toggle-button">↪</button>
+    </div>
+</body>
+</html>

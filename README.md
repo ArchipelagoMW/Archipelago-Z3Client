@@ -1,2 +1,10 @@
 # Archipelago-Z3Client
-A fully web-based client designed to replace the old Python Z3 client in the Archipelgo MultiWorld ecosystem.
+A Z3 client designed to replace the old Python Z3 client in the Archipelgo MultiWorld ecosystem.
+
+### Run it from source:
+```bash
+git clone https://github.com/LegendaryLinux/Archipelago-Z3Client
+cd Archipelago-Z3Client
+npm install
+node main.js
+```

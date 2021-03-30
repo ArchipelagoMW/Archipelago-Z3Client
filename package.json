@@ -1,0 +1,25 @@
+{
+  "name": "archipelago-z3client",
+  "version": "1.0.0",
+  "author": "Chris Wilson",
+  "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron ."
+  },
+  "homepage": "https://github.com/LegendaryLinux/Archipelago-Z3Client#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LegendaryLinux/Archipelago-Z3Client.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LegendaryLinux/Archipelago-Z3Client/issues"
+  },
+  "dependencies": {
+    "path": "^0.12.7"
+  },
+  "devDependencies": {
+    "electron": "^12.0.2"
+  }
+}
