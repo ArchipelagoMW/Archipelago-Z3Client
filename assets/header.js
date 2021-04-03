@@ -2,10 +2,6 @@ window.addEventListener('load', () => {
   const header = document.getElementById('header');
   const sidebar = document.getElementById('sidebar');
 
-  // TODO: Update SNES device choice
-
-  // TODO: Update server address
-
   // TODO: Update text size
 
   // Include a toggle for terminal mode

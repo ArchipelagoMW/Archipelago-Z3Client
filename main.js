@@ -3,6 +3,9 @@ const path = require('path');
 
 const VERSION = "Alpha 0.0.1";
 
+// TODO: Remove this line, as it is used for in-development notifications
+app.setAppUserModelId(process.execPath);
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1280,
