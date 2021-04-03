@@ -11,14 +11,23 @@ window.addEventListener('load', () => {
 
   // Handle SNES device change
   document.getElementById('snes-device').addEventListener('change', (event) => {
-    if (event.target.value === '-1') { snesSocket.close(); }
+    const snesStatus = document.getElementById('snes-device-status');
+    snesStatus.innerText = 'Not Connected';
+    snesStatus.classList.remove('connected');
+    snesStatus.classList.add('disconnected');
+
+    // The user may wish to disconnect temporarily
+    if (event.target.value === '-1') { return snesSocket.close(); }
+
     sendAttachRequest(event.target.value);
   });
 });
 
-const establishSnesHandlerConnection = (device = null) => {
-  // Close the connection to the SNES handler
-  if (snesSocket) { snesSocket.close(); }
+const establishSnesHandlerConnection = (requestedDevice = null) => {
+  // Close the connection to the SNES handler if it is not already closed
+  if (snesSocket && snesSocket.readyState === WebSocket.OPEN) {
+    snesSocket.close();
+  }
   snesSocket = null;
 
   // Attempt to connect to the SNES handler
@@ -44,7 +53,7 @@ const establishSnesHandlerConnection = (device = null) => {
 
         // Clear the current device list
         const snesSelect = document.getElementById('snes-device');
-        snesSelect.childNodes.forEach((node) => snesSelect.removeChild(node));
+        while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
 
         // Add a "Select a device..." option
         const neutralOption = document.createElement('option');
@@ -57,6 +66,7 @@ const establishSnesHandlerConnection = (device = null) => {
           const deviceOption = document.createElement('option');
           deviceOption.innerText = device.toString();
           deviceOption.setAttribute('value', device);
+          if (device === requestedDevice) { deviceOption.selected = true; }
           snesSelect.appendChild(deviceOption);
         });
 
@@ -64,8 +74,8 @@ const establishSnesHandlerConnection = (device = null) => {
         snesSelect.removeAttribute('disabled');
 
         // If the user requested a specific device, attach to it
-        if (device) {
-          return sendAttachRequest(device);
+        if (requestedDevice) {
+          return sendAttachRequest(requestedDevice);
         }
 
         // If only one device is available, connect to it
@@ -78,6 +88,10 @@ const establishSnesHandlerConnection = (device = null) => {
       case 'Info':
         const connectionInfo = data.Results;
         opcodeWaiting = null;
+        const snesStatus = document.getElementById('snes-device-status');
+        snesStatus.innerText = 'Connected';
+        snesStatus.classList.remove('disconnected');
+        snesStatus.classList.add('connected');
         break;
 
       case 'GetAddress':
@@ -108,7 +122,10 @@ const establishSnesHandlerConnection = (device = null) => {
 };
 
 const sendAttachRequest = (device) => {
-  if (!snesSocket) { return establishSnesHandlerConnection(device); }
+  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) {
+    return establishSnesHandlerConnection(device);
+  }
+
   snesSocket.send(JSON.stringify({
     Opcode: 'Attach',
     Space: 'SNES',
@@ -125,7 +142,7 @@ const sendAttachRequest = (device) => {
 };
 
 const getFromAddress = (hexOffset, sizeInBytes) => {
-  if (!snesSocket) { return; }
+  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) { return; }
   opcodeWaiting = 'GetAddress';
   snesSocket.send(JSON.stringify({
     Opcode: 'GetAddress',
@@ -135,7 +152,7 @@ const getFromAddress = (hexOffset, sizeInBytes) => {
 };
 
 const putToAddress = (hexOffset, sizeInBytes, binaryData) => {
-  if (!snesSocket) { return; }
+  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) { return; }
   snesSocket.send(JSON.stringify({
     Opcode: 'PutAddress',
     Space: 'SNES',
