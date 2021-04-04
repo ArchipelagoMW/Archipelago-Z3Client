@@ -120,10 +120,14 @@ const sendAttachRequest = (device) => {
   });
 };
 
-const getFromAddress = (hexOffset, sizeInBytes) => {
-  sendRequest({ Opcode: 'GetAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] }, (results) => {
-    // TODO: Do something with this data
-  });
+/**
+ * Retrieve data from a SNES device.
+ * @param hexOffset
+ * @param sizeInBytes
+ * @param callback Function to perform after data is retrieved. Accepts a single argument, which is the data retrieved.
+ */
+const getFromAddress = (hexOffset, sizeInBytes, callback) => {
+  sendRequest({ Opcode: 'GetAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] }, callback);
 };
 
 const putToAddress = (hexOffset, sizeInBytes, binaryData) => {
