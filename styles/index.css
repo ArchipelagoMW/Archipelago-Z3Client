@@ -26,6 +26,10 @@ body{
     color: red;
 }
 
+#snes-device-refresh{
+    cursor: pointer;
+}
+
 #console-output-wrapper{
     display: flex;
     flex-direction: column;

@@ -2,8 +2,13 @@ const SNES_HANDLER_ADDRESS = 'ws://127.0.0.1';
 const SNES_HANDLER_PORT = 8080;
 let snesSocket = null;
 let deviceList = [];
-let opcodeWaiting = null;
-let retryCount = 0;
+let connectedDeviceType = null;
+
+// Request queueing system for QUsb2SNES
+let requestQueue = [];
+let queueInterval = null;
+let queueLocked = false;
+let currentRequest = null;
 
 window.addEventListener('load', () => {
   // Attempt to connect to QUsb2Snes
@@ -21,6 +26,9 @@ window.addEventListener('load', () => {
 
     sendAttachRequest(event.target.value);
   });
+
+  // If the user presses the refresh button, reset the SNES connection entirely
+  document.getElementById('snes-device-refresh').addEventListener('click', establishSnesHandlerConnection);
 });
 
 const establishSnesHandlerConnection = (requestedDevice = null) => {
@@ -32,80 +40,61 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
 
   // Attempt to connect to the SNES handler
   snesSocket = new WebSocket(`${SNES_HANDLER_ADDRESS}:${SNES_HANDLER_PORT}`);
-  snesSocket.onopen = (event) => {
-    opcodeWaiting = 'DeviceList';
-    snesSocket.send(JSON.stringify({
+  snesSocket.onopen = () => {
+    initializeRequestQueue();
+    const requestData = {
       Opcode: 'DeviceList',
       Space: 'SNES',
-    }));
+    };
+    sendRequest(requestData, (response) => {
+      // This is a list of available devices
+      deviceList = response;
+
+      // Clear the current device list
+      const snesSelect = document.getElementById('snes-device');
+      while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
+
+      // Add a "Select a device..." option
+      const neutralOption = document.createElement('option');
+      neutralOption.innerText = 'Select a device...';
+      neutralOption.setAttribute('value', '-1');
+      snesSelect.appendChild(neutralOption);
+
+      // Add all SNES devices to the list
+      deviceList.forEach((device) => {
+        const deviceOption = document.createElement('option');
+        deviceOption.innerText = device.toString();
+        deviceOption.setAttribute('value', device);
+        if (device === requestedDevice) { deviceOption.selected = true; }
+        snesSelect.appendChild(deviceOption);
+      });
+
+      // Enable the select list
+      snesSelect.removeAttribute('disabled');
+
+      // If the user requested a specific device, attach to it
+      if (requestedDevice) {
+        return sendAttachRequest(requestedDevice);
+      }
+
+      // If only one device is available, connect to it
+      if (deviceList.length === 1) {
+        sendAttachRequest(deviceList[0]);
+        snesSelect.value = deviceList[0];
+      }
+    });
   };
 
   snesSocket.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    console.log(data);
+    console.log(`Received: ${JSON.stringify(data)}`);
 
-    // The usb2snes protocol is synchronous, so we need to emulate that
-    switch(opcodeWaiting){
-      case 'DeviceList':
-        // This is a list of available devices
-        deviceList = data.Results;
-        opcodeWaiting = null;
-
-        // Clear the current device list
-        const snesSelect = document.getElementById('snes-device');
-        while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
-
-        // Add a "Select a device..." option
-        const neutralOption = document.createElement('option');
-        neutralOption.innerText = 'Select a device...';
-        neutralOption.setAttribute('value', '-1');
-        snesSelect.appendChild(neutralOption);
-
-        // Add all SNES devices to the list
-        deviceList.forEach((device) => {
-          const deviceOption = document.createElement('option');
-          deviceOption.innerText = device.toString();
-          deviceOption.setAttribute('value', device);
-          if (device === requestedDevice) { deviceOption.selected = true; }
-          snesSelect.appendChild(deviceOption);
-        });
-
-        // Enable the select list
-        snesSelect.removeAttribute('disabled');
-
-        // If the user requested a specific device, attach to it
-        if (requestedDevice) {
-          return sendAttachRequest(requestedDevice);
-        }
-
-        // If only one device is available, connect to it
-        if (deviceList.length === 1) {
-          sendAttachRequest(deviceList[0]);
-          snesSelect.value = deviceList[0];
-        }
-        break;
-
-      case 'Info':
-        const connectionInfo = data.Results;
-        opcodeWaiting = null;
-        const snesStatus = document.getElementById('snes-device-status');
-        snesStatus.innerText = 'Connected';
-        snesStatus.classList.remove('disconnected');
-        snesStatus.classList.add('connected');
-        break;
-
-      case 'GetAddress':
-        // TODO: Handle requested incoming data
-        opcodeWaiting = null;
-        break;
-
-      default:
-        // TODO: Figure out what to do with other random data sent from the SNES, if any
-        console.log(data);
-    }
+    currentRequest.callback(data.Results);
+    currentRequest = null;
+    queueLocked = false;
   }
 
-  snesSocket.onerror = (event) => {
+  snesSocket.onerror = () => {
     new Notification('SNES Handler Error', {
       body: 'An error occurred with QUsb2SNES, and the connection has been closed. Please restart QUsb2SNES and ' +
         'retry the connection.'
@@ -114,51 +103,105 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
 
   snesSocket.onclose = (event) => {
     if (event.wasClean === false) {
+      destroyRequestQueue();
       return console.log(event);
     }
-
-    console.log('Connection closed cleanly.');
   }
 };
 
 const sendAttachRequest = (device) => {
-  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) {
-    return establishSnesHandlerConnection(device);
-  }
-
-  snesSocket.send(JSON.stringify({
-    Opcode: 'Attach',
-    Space: 'SNES',
-    Operands: [device],
-  }));
-  // Wait a quarter second, then run an INFO command to see if the connection worked
-  setTimeout(() => {
-    opcodeWaiting = 'Info';
-    snesSocket.send(JSON.stringify({
-      Opcode: 'Info',
-      Space: 'SNES',
-    }));
-  }, 250);
+  sendRequest({ Opcode: 'Attach', Space: 'SNES', Operands: [device] });
+  sendRequest({ Opcode: 'Info', Space: 'SNES' }, (results) => {
+    connectedDeviceType = results[1];
+    const snesStatus = document.getElementById('snes-device-status');
+    snesStatus.innerText = 'Connected';
+    snesStatus.classList.remove('disconnected');
+    snesStatus.classList.add('connected');
+  });
 };
 
 const getFromAddress = (hexOffset, sizeInBytes) => {
-  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) { return; }
-  opcodeWaiting = 'GetAddress';
-  snesSocket.send(JSON.stringify({
-    Opcode: 'GetAddress',
-    Space: 'SNES',
-    Operands: [hexOffset, sizeInBytes],
-  }));
+  sendRequest({ Opcode: 'GetAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] }, (results) => {
+    // TODO: Do something with this data
+  });
 };
 
 const putToAddress = (hexOffset, sizeInBytes, binaryData) => {
-  if (!snesSocket || snesSocket.readyState === WebSocket.CLOSED) { return; }
-  snesSocket.send(JSON.stringify({
-    Opcode: 'PutAddress',
-    Space: 'SNES',
-    Operands: [hexOffset, sizeInBytes],
-  }));
-  setTimeout(() => {
-    snesSocket.send(binaryData);
-  }, 100);
+  sendMultipleRequests([
+    {
+      data: { Opcode: 'PutAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] },
+      callback: null,
+      dataType: 'json',
+    },
+    {
+      data: binaryData,
+      callback: null,
+      dataType: 'binary',
+    },
+  ]);
+};
+
+const initializeRequestQueue = () => {
+  // Clear the current request queue if one is present
+  if (queueInterval !== null) { destroyRequestQueue(); }
+
+  queueInterval = setInterval(() => {
+    if (snesSocket.readyState !== WebSocket.OPEN) {
+      destroyRequestQueue();
+      new Notification('SNES Device Disconnected', {
+        body: 'QUsb2SNES has failed again. Please restart it and reconnect via the client.'
+      });
+      return;
+    }
+    if (queueLocked || requestQueue.length === 0) { return; }
+    currentRequest = requestQueue.shift();
+
+    // Send data in the appropriate format
+    switch(currentRequest.dataType) {
+      case 'json':
+        snesSocket.send(JSON.stringify(currentRequest.data));
+        break;
+      case 'binary':
+        snesSocket.send(currentRequest.data);
+        break;
+      default:
+        new Notification('Unknown Data Type Sent', { body: 'Details have been logged.' });
+        console.log(currentRequest.data);
+        return destroyRequestQueue();
+    }
+
+    // Only lock the queue if a response is expected
+    queueLocked = currentRequest.callback !== null;
+  }, 25)
+};
+
+const sendRequest = (data, callback=null, dataType='json') => {
+  if (!snesSocket || snesSocket.readyState !== WebSocket.OPEN) { return; }
+  if (queueInterval === null) { return; }
+  requestQueue.push({ data, callback, dataType });
+};
+
+/**
+ * Ensure a series of commands are sent back-to-back. This prevents using Opcode PutAddress from accidentally being
+ * followed by a GetAddress. Relies on the queue to process all events in their proper order.
+ * @param data Array of: [{ data: {}, callback: function|null, dataType: string }, ...]
+ */
+const sendMultipleRequests = (data) => {
+  if (!snesSocket || snesSocket.readyState !== WebSocket.OPEN) { return; }
+  if (queueInterval === null) { return; }
+  data.forEach((datum) => {
+    requestQueue.push({
+      data: datum.data,
+      callback: datum.callback,
+      dataType: datum.dataType,
+    });
+  });
+};
+
+const destroyRequestQueue = () => {
+  if (queueInterval) { clearInterval(queueInterval); }
+  queueInterval = null;
+  requestQueue = [];
+  queueLocked = false;
+  currentRequest = null;
 };
