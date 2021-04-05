@@ -22,7 +22,10 @@ window.addEventListener('load', () => {
     snesStatus.classList.add('disconnected');
 
     // The user may wish to disconnect temporarily
-    if (event.target.value === '-1') { return snesSocket.close(); }
+    if (event.target.value === '-1') {
+      destroyRequestQueue();
+      return (snesSocket.readyState === WebSocket.OPEN) ? snesSocket.close() : null;
+    }
 
     sendAttachRequest(event.target.value);
   });
@@ -35,8 +38,8 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
   // Close the connection to the SNES handler if it is not already closed
   if (snesSocket && snesSocket.readyState === WebSocket.OPEN) {
     snesSocket.close();
+    destroyRequestQueue();
   }
-  snesSocket = null;
 
   // Attempt to connect to the SNES handler
   snesSocket = new WebSocket(`${SNES_HANDLER_ADDRESS}:${SNES_HANDLER_PORT}`);
@@ -102,14 +105,23 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
   }
 
   snesSocket.onclose = (event) => {
+    const snesStatus = document.getElementById('snes-device-status');
+    snesStatus.innerText = 'Not Connected';
+    snesStatus.classList.remove('connected');
+    snesStatus.classList.add('disconnected');
+    destroyRequestQueue();
+
     if (event.wasClean === false) {
-      destroyRequestQueue();
       return console.log(event);
     }
   }
 };
 
 const sendAttachRequest = (device) => {
+  if (snesSocket === null || snesSocket.readyState !== WebSocket.OPEN) {
+    return establishSnesHandlerConnection(device);
+  }
+
   sendRequest({ Opcode: 'Attach', Space: 'SNES', Operands: [device] });
   sendRequest({ Opcode: 'Info', Space: 'SNES' }, (results) => {
     connectedDeviceType = results[1];
