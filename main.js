@@ -1,7 +1,12 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
-const VERSION = "Alpha 0.0.1";
+const VERSION = {
+  state: 'Alpha',
+  major: 0,
+  minor: 0,
+  patch: 1,
+};
 
 // TODO: Remove this line, as it is used for in-development notifications
 app.setAppUserModelId(process.execPath);

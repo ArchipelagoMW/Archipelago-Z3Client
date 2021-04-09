@@ -5,6 +5,7 @@
     <title>Archipelago LttP Client</title>
     <meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
     <link rel="stylesheet" href="styles/index.css" />
+    <link rel="stylesheet" href="styles/sidebar.css" />
     <script type="application/ecmascript" src="assets/sidebar.js"></script>
     <script type="application/ecmascript" src="assets/header.js"></script>
     <script type="application/ecmascript" src="assets/snesSocket.js"></script>
@@ -66,6 +67,39 @@
     </div>
     <div id="sidebar">
         <button id="sidebar-toggle-button">↪</button>
+        <h2>Info Panel</h2>
+        <table id="info-table">
+            <tbody>
+                <tr>
+                    <td>Client Version:</td>
+                    <td id="client-version"></td>
+                </tr>
+                <tr>
+                    <td>Server Version:</td>
+                    <td id="server-version"></td>
+                </tr>
+                <tr>
+                    <td>Forfeit Mode:</td>
+                    <td id="forfeit-mode"></td>
+                </tr>
+                <tr>
+                    <td>Remaining Mode:</td>
+                    <td id="remaining-mode"></td>
+                </tr>
+                <tr>
+                    <td>Hint Cost:</td>
+                    <td id="hint-cost"></td>
+                </tr>
+                <tr>
+                    <td>Check Points:</td>
+                    <td id="check-points"></td>
+                </tr>
+            </tbody>
+        </table>
+        <div id="notes-wrapper">
+            <label for="notes">Notes:</label>
+            <textarea id="notes"></textarea>
+        </div>
     </div>
 </body>
 </html>

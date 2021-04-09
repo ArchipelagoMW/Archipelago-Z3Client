@@ -61,28 +61,6 @@ body{
     flex-grow: 100;
 }
 
-#sidebar{
-    border: 2px solid #6a6a6a;
-}
-
-#sidebar:not(.collapsed){
-    width: calc(25% - 1.5em - 4px);
-    margin-left: 0.5rem;
-}
-
-#sidebar.collapsed{
-    margin-left: 0.5rem;
-    padding: 0.25rem;
-    width: 34px;
-}
-
-#sidebar-toggle-button{
-    position: absolute;
-    top: calc(0.5rem + 5px);
-    right: calc(0.5rem + 5px);
-    width: 35px;
-}
-
 .spacer{
     flex-grow: 100;
 }

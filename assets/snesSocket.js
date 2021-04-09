@@ -89,10 +89,11 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
   };
 
   snesSocket.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    console.log(`Received: ${JSON.stringify(data)}`);
+    const data = (event.data instanceof Blob) ?
+      event.data : (JSON.parse(event.data)).Results;
+    console.log(`Received: ${data}`);
 
-    currentRequest.callback(data.Results);
+    currentRequest.callback(data);
     currentRequest = null;
     queueLocked = false;
   }
