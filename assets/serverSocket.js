@@ -21,9 +21,7 @@ window.addEventListener('load', () => {
       event.target.value : `${event.target.value}:${DEFAULT_SERVER_PORT}`;
 
     serverSocket = new WebSocket(`ws://${serverAddress}`);
-    serverSocket.onopen = (event) => {
-
-    };
+    serverSocket.onopen = (event) => {};
 
     // Handle incoming messages
     serverSocket.onmessage = (event) => {
@@ -41,6 +39,17 @@ window.addEventListener('load', () => {
               command.remaining_mode[0].toUpperCase() + command.remaining_mode.substring(1).toLowerCase();
             document.getElementById('hint-cost').innerText = command.hint_cost.toString();
             document.getElementById('points-per-check').innerText = command.location_check_points.toString();
+
+            // Update the local cache of location and item maps if necessary
+            if (!localStorage.getItem('dataPackageVersion') || !localStorage.getItem('locationMap') ||
+              !localStorage.getItem('itemMap') ||
+              command.datapackage_version !== localStorage.getItem('dataPackageVersion')) {
+              updateLocationCache();
+            } else {
+              // Load the location and item maps into memory
+              locationMap = JSON.parse(localStorage.getItem('locationMap'));
+              itemMap = JSON.parse(localStorage.getItem('itemMap'));
+            }
 
             // Authenticate with the server
             if (snesSocket && snesSocket.readyState === WebSocket.OPEN){
@@ -62,9 +71,13 @@ window.addEventListener('load', () => {
           case 'Connected':
             // TODO: Handle missing locations sent from server
 
+            // Update header text
             serverStatus.classList.remove('disconnected');
             serverStatus.innerText = 'Connected';
             serverStatus.classList.add('connected');
+
+            // Save the list of players provided by the server
+            players = command.players;
             break;
 
           case 'ConnectionRefused':
@@ -106,7 +119,16 @@ window.addEventListener('load', () => {
             break;
 
           case 'DataPackage':
-            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            // Save updated location and item maps into localStorage
+            if (command.data.version !== 0) { // Unless this is a custom package, denoted by version zero
+              localStorage.setItem('dataPackageVersion', command.data.version);
+              localStorage.setItem('locationMap', JSON.stringify(command.data.lookup_any_location_id_to_name));
+              localStorage.setItem('itemMap', JSON.stringify(command.data.lookup_any_item_id_to_name));
+            }
+
+            locationMap = command.data.lookup_any_location_id_to_name;
+            itemMap = command.data.lookup_any_item_id_to_name;
+
             break;
 
           default:
@@ -156,4 +178,11 @@ const serverSync = () => {
   if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
     serverSocket.send(JSON.stringify([{ cmd: 'Sync' }]));
   }
+};
+
+const updateLocationCache = () => {
+  if (!serverSocket || serverSocket.readyState !== WebSocket.OPEN) { return; }
+  serverSocket.send(JSON.stringify([{
+    cmd: 'GetDataPackage',
+  }]));
 };

@@ -21,3 +21,10 @@ let snesSocket = null;
 // Archipelago server
 const DEFAULT_SERVER_PORT = 38281;
 let serverSocket = null;
+
+// Players in the current game, received from Connected server packet
+let players = [];
+
+// Location and item maps, populated from localStorage
+let locationMap = {};
+let itemMap = {};

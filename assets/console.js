@@ -1,8 +1,3 @@
-const identityColors = {
-  player_id: '#73e86c',
-  item_id: '#ff2e2e',
-  location_id: '#5ea2c1',
-};
 let cachedCommands = [];
 let commandCursor = 0;
 
@@ -61,8 +56,26 @@ const appendFormattedConsoleMessage = (messageParts) => {
   // Create the spans to populate the message div
   for (const part of messageParts) {
     const span = document.createElement('span');
-    span.style.color = identityColors[part.type];
-    span.innerText = part.text;
+    if (part.hasOwnProperty('type')) {
+      switch(part.type){
+        case 'player_id':
+          span.style.color = '#52b44c';
+          span.innerText = players[parseInt(part.text, 10) - 1].alias;
+          break;
+        case 'item_id':
+          span.style.color = '#fc5252';
+          span.innerText = itemMap[part.text];
+          break;
+        case 'location_id':
+          span.style.color = '#5ea2c1';
+          span.innerText = locationMap[part.text];
+          break;
+        default:
+          span.innerText = part.text;
+      }
+    } else {
+      span.innerText = part.text;
+    }
     messageDiv.appendChild(span);
   }
 
