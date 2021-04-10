@@ -29,7 +29,7 @@ window.addEventListener('load', () => {
     serverSocket.onmessage = (event) => {
       const commands = JSON.parse(event.data);
       for (let command of commands) {
-        console.log(command);
+        const serverStatus = document.getElementById('server-status');
         switch(command.cmd) {
           case 'RoomInfo':
             // Update sidebar with info from the server
@@ -40,7 +40,7 @@ window.addEventListener('load', () => {
             document.getElementById('remaining-mode').innerText =
               command.remaining_mode[0].toUpperCase() + command.remaining_mode.substring(1).toLowerCase();
             document.getElementById('hint-cost').innerText = command.hint_cost.toString();
-            document.getElementById('check-points').innerText = command.location_check_points.toString();
+            document.getElementById('points-per-check').innerText = command.location_check_points.toString();
 
             // Authenticate with the server
             if (snesSocket && snesSocket.readyState === WebSocket.OPEN){
@@ -57,35 +57,74 @@ window.addEventListener('load', () => {
                 serverSocket.send(JSON.stringify([connectionData]));
               });
             }
-
             break;
+
           case 'Connected':
             // TODO: Handle missing locations sent from server
 
-            const serverStatus = document.getElementById('server-status');
             serverStatus.classList.remove('disconnected');
             serverStatus.innerText = 'Connected';
             serverStatus.classList.add('connected');
+            break;
 
           case 'ConnectionRefused':
+            serverStatus.classList.remove('connected');
+            serverStatus.innerText = 'Not Connected';
+            serverStatus.classList.add('disconnected');
+            if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+              serverSocket.close();
+            }
+            break;
+
           case 'ReceivedItems':
+            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            break;
+
           case 'LocationInfo':
+            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            break;
+
           case 'RoomUpdate':
+            // Update sidebar with info from the server
+            document.getElementById('server-version').innerText =
+              `${command.version.major}.${command.version.minor}.${command.version.build}`;
+            document.getElementById('forfeit-mode').innerText =
+              command.forfeit_mode[0].toUpperCase() + command.forfeit_mode.substring(1).toLowerCase();
+            document.getElementById('remaining-mode').innerText =
+              command.remaining_mode[0].toUpperCase() + command.remaining_mode.substring(1).toLowerCase();
+            document.getElementById('hint-cost').innerText = command.hint_cost.toString();
+            document.getElementById('points-per-check').innerText = command.location_check_points.toString();
+            document.getElementById('hint-points').innerText = command.hint_points.toString();
+            break;
+
           case 'Print':
+            appendConsoleMessage(command.text);
+            break;
+
           case 'PrintJSON':
+            appendFormattedConsoleMessage(command.data);
+            break;
+
           case 'DataPackage':
+            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            break;
+
           default:
-            console.log(`Unhandled event received: ${event.data}`);
+            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            break;
         }
       }
     };
 
-    // TODO: Handle close events
     serverSocket.onclose = (event) => {
       const serverStatus = document.getElementById('server-status');
       serverStatus.classList.remove('connected');
       serverStatus.innerText = 'Not Connected';
       serverStatus.classList.add('disconnected');
+
+      if (!event.target.wasClean) {
+        console.log(event);
+      }
     };
 
     // TODO: Handle error events
@@ -102,4 +141,19 @@ const getClientId = () => {
     localStorage.setItem('clientId', clientId);
   }
   return clientId;
+};
+
+const sendMessageToServer = (message) => {
+  if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+    serverSocket.send(JSON.stringify([{
+      cmd: 'Say',
+      text: message,
+    }]));
+  }
+};
+
+const serverSync = () => {
+  if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+    serverSocket.send(JSON.stringify([{ cmd: 'Sync' }]));
+  }
 };
