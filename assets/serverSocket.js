@@ -1,17 +1,26 @@
-let serverSocket = null;
-
 window.addEventListener('load', () => {
   // Handle server address change
   document.getElementById('server-address').addEventListener('keydown', (event) => {
     if (event.key !== 'Enter') { return; }
+
+    if (!snesSocket || snesSocket.readyState !== WebSocket.OPEN){
+      // TODO: Warn the user in some way. Probably print to the console
+      return;
+    }
 
     if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
       serverSocket.close();
       serverSocket = null;
     }
 
-    // TODO: Establish a connection to the server
-    serverSocket = new WebSocket(`ws://${event.target.value}`);
+    // If the input value is empty, do not attempt to reconnect
+    if (!event.target.value) { return; }
+
+    // Attempt to connect to the server
+    const serverAddress = (event.target.value.search(/.*:\d+/) > -1) ?
+      event.target.value : `${event.target.value}:${DEFAULT_SERVER_PORT}`;
+
+    serverSocket = new WebSocket(`ws://${serverAddress}`);
     serverSocket.onopen = (event) => {
 
     };
@@ -34,13 +43,11 @@ window.addEventListener('load', () => {
 
             // Authenticate with the server
             if (snesSocket && snesSocket.readyState === WebSocket.OPEN){
-              // TODO: Figure out what data to get from the SNES, and in what format to send it to the server
               getFromAddress(0xE00000 + 0x2000, 0x15, async (data) => {
-                const playerName = await data.text();
                 const connectionData = {
                   cmd: 'Connect',
                   game: 'A Link to the Past',
-                  name: playerName,
+                  name: btoa(await data.text()), // Base64 encoded rom name
                   uuid: (Math.random() * 1000000).toString(),
                   tags: ['LttP Client'],
                   password: null,

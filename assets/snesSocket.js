@@ -1,6 +1,3 @@
-const SNES_HANDLER_ADDRESS = 'ws://127.0.0.1';
-const SNES_HANDLER_PORT = 8080;
-let snesSocket = null;
 let deviceList = [];
 let connectedDeviceType = null;
 
@@ -135,18 +132,35 @@ const sendAttachRequest = (device) => {
 
 /**
  * Retrieve data from a SNES device.
- * @param hexOffset
- * @param sizeInBytes
+ * QUsb2SNES (may it forever burn in /dev/null) requires that when requesting an
+ * address and byte count, those arguments are provided as hexadecimal numbers formatted as strings, and without their
+ * preceding 0x. So 0x15 should be provided as "15".
+ * For simplicity, this function accepts raw hexadecimal numbers, and does the conversion for you.
+ * @param hexOffset Location to begin reading from SNES memory
+ * @param byteCountInHex Number of bytes to read
  * @param callback Function to perform after data is retrieved. Accepts a single argument, which is the data retrieved.
  */
-const getFromAddress = (hexOffset, sizeInBytes, callback) => {
-  sendRequest({ Opcode: 'GetAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] }, callback);
+const getFromAddress = (hexOffset, byteCountInHex, callback) => {
+  sendRequest({
+    Opcode: 'GetAddress',
+    Space: 'SNES',
+    Operands: [hexOffset.toString(16), byteCountInHex.toString(16)]
+  }, callback);
 };
 
-const putToAddress = (hexOffset, sizeInBytes, binaryData) => {
+/**
+ * Retrieve data from a SNES device.
+ * QUsb2SNES (may it forever burn in /dev/null) requires that when requesting an
+ * address and byte count, those arguments are provided as hexadecimal numbers formatted as strings, and without their
+ * preceding 0x. So 0x15 should be provided as "15".
+ * For simplicity, this function accepts raw hexadecimal numbers, and does the conversion for you.
+ * @param hexOffset Location to begin reading from SNES memory
+ * @param binaryData Data to be written to the ROM
+ */
+const putToAddress = (hexOffset, binaryData) => {
   sendMultipleRequests([
     {
-      data: { Opcode: 'PutAddress', Space: 'SNES', Operands: [hexOffset, sizeInBytes] },
+      data: { Opcode: 'PutAddress', Space: 'SNES', Operands: [hexOffset.toString(16), binaryData.size.toString(16)] },
       callback: null,
       dataType: 'json',
     },

@@ -1,7 +1,8 @@
 window.addEventListener('load', () => {
   const header = document.getElementById('header');
   const sidebar = document.getElementById('sidebar');
-  document.getElementById('client-version').innerText = VERSION;
+  document.getElementById('client-version').innerText =
+    `${VERSION.state} ${VERSION.major}.${VERSION.minor}.${VERSION.patch}`;
 
   // TODO: Update text size
 

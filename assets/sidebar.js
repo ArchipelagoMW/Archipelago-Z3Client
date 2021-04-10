@@ -10,4 +10,12 @@ window.addEventListener('load', () => {
     sidebar.classList.add('collapsed');
     collapseButton.innerText = '↩';
   });
+
+  // Load saved notes and update saved notes when a user changes their value
+  const notesBox = document.getElementById('notes');
+  const loadedNotes = localStorage.getItem('notes');
+  if (loadedNotes) {notesBox.value = loadedNotes; }
+  notesBox.addEventListener('keyup', (event) => {
+    localStorage.setItem('notes', event.target.value);
+  });
 });
