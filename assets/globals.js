@@ -1,9 +1,16 @@
 // Client version data
-const VERSION = {
+const CLIENT_VERSION = {
   state: 'Alpha',
   major: 0,
   minor: 0,
   patch: 1,
+};
+
+const SUPPORTED_ARCHIPELAGO_VERSION = {
+  major: 0,
+  minor: 0,
+  build: 3,
+  class: 'Version',
 };
 
 // SNES Device

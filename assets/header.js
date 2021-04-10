@@ -2,7 +2,7 @@ window.addEventListener('load', () => {
   const header = document.getElementById('header');
   const sidebar = document.getElementById('sidebar');
   document.getElementById('client-version').innerText =
-    `${VERSION.state} ${VERSION.major}.${VERSION.minor}.${VERSION.patch}`;
+    `${CLIENT_VERSION.state} ${CLIENT_VERSION.major}.${CLIENT_VERSION.minor}.${CLIENT_VERSION.patch}`;
 
   // TODO: Update text size
 

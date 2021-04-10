@@ -11,9 +11,7 @@ const createWindow = () => {
     height: 720,
     minHeight: 500,
     autoHideMenuBar: true,
-    webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
-    }
+    webPreferences: {}
   });
 
   win.loadFile('index.html');

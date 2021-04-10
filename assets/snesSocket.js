@@ -109,6 +109,10 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
     snesStatus.classList.add('disconnected');
     destroyRequestQueue();
 
+    if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+      serverSocket.close();
+    }
+
     if (event.wasClean === false) {
       return console.log(event);
     }

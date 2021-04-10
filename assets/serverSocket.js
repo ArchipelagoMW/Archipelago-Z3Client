@@ -32,6 +32,7 @@ window.addEventListener('load', () => {
         console.log(command);
         switch(command.cmd) {
           case 'RoomInfo':
+            // Update sidebar with info from the server
             document.getElementById('server-version').innerText =
               `${command.version.major}.${command.version.minor}.${command.version.build}`;
             document.getElementById('forfeit-mode').innerText =
@@ -48,23 +49,24 @@ window.addEventListener('load', () => {
                   cmd: 'Connect',
                   game: 'A Link to the Past',
                   name: btoa(await data.text()), // Base64 encoded rom name
-                  uuid: (Math.random() * 1000000).toString(),
+                  uuid: getClientId(),
                   tags: ['LttP Client'],
-                  password: null,
-                  version: {
-                    major: 0,
-                    minor: 0,
-                    build: 3,
-                    class: 'Version',
-                  },
+                  password: null, // TODO: Handle password protected lobbies
+                  version: SUPPORTED_ARCHIPELAGO_VERSION,
                 };
-
                 serverSocket.send(JSON.stringify([connectionData]));
               });
             }
 
             break;
           case 'Connected':
+            // TODO: Handle missing locations sent from server
+
+            const serverStatus = document.getElementById('server-status');
+            serverStatus.classList.remove('disconnected');
+            serverStatus.innerText = 'Connected';
+            serverStatus.classList.add('connected');
+
           case 'ConnectionRefused':
           case 'ReceivedItems':
           case 'LocationInfo':
@@ -80,7 +82,10 @@ window.addEventListener('load', () => {
 
     // TODO: Handle close events
     serverSocket.onclose = (event) => {
-      console.log(event);
+      const serverStatus = document.getElementById('server-status');
+      serverStatus.classList.remove('connected');
+      serverStatus.innerText = 'Not Connected';
+      serverStatus.classList.add('disconnected');
     };
 
     // TODO: Handle error events
@@ -89,3 +94,12 @@ window.addEventListener('load', () => {
     };
   });
 });
+
+const getClientId = () => {
+  let clientId = localStorage.getItem('clientId');
+  if (!clientId) {
+    clientId = (Math.random() * 10000000000000000).toString();
+    localStorage.setItem('clientId', clientId);
+  }
+  return clientId;
+};

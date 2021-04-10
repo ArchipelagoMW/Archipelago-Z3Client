@@ -1,0 +1,16 @@
+#header{
+    display: flex;
+    flex-direction: row;
+}
+
+#header .connected{
+    color: green;
+}
+
+#header .disconnected{
+    color: red;
+}
+
+#snes-device-refresh{
+    cursor: pointer;
+}
