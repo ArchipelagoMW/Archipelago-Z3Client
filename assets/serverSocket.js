@@ -97,28 +97,20 @@ window.addEventListener('load', () => {
                 const roomData = byteView.getUint8(6);
                 const scoutLocation = byteView.getUint8(7);
 
-                console.log(byteBuffer);
-                console.log(`romItemsReceived: ${romItemsReceived}`);
-                console.log(`itemsReceived.length: ${itemsReceived.length}`);
-                console.log(`linkHoldingUpItem: ${linkHoldingUpItem}`);
-
                 // If there are still items needing to be sent, and Link is not in the middle of receiving something,
                 // send the item to the SNES
                 if ((romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
                   // Increment the counter of items sent to the ROM
-                  // TODO: Counter is not being properly incremented
                   const indexBuffer = new ArrayBuffer(2);
                   const indexView = new DataView(indexBuffer);
                   indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
                   indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
-                  console.log(`Sending: ${indexView.getUint8(0)} and ${indexView.getUint8(1)}`)
                   putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
 
                   // Send the item to the SNES
                   const itemBuffer = new ArrayBuffer(1);
                   const itemView = new DataView(itemBuffer);
                   itemView.setUint8(0, itemsReceived[romItemsReceived].item);
-                  console.log(`Item: ${itemView.getUint8(0)}`);
                   putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemView]));
 
                   // Tell the SNES the id of the player who sent the item
@@ -126,7 +118,6 @@ window.addEventListener('load', () => {
                   const senderView = new DataView(senderBuffer);
                   senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
                     0 : itemsReceived[romItemsReceived].player)
-                  console.log(`Sender: ${senderView.getUint8(0)}`);
                   putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
                 }
 
@@ -134,7 +125,7 @@ window.addEventListener('load', () => {
                   // TODO: Implement this later
                 }
               });
-            }, 5000);
+            });
             break;
 
           case 'ConnectionRefused':
