@@ -1,3 +1,6 @@
+let receivedItems = [];
+let snesWatcherInterval = null;
+
 window.addEventListener('load', () => {
   // Handle server address change
   document.getElementById('server-address').addEventListener('keydown', (event) => {
@@ -53,7 +56,7 @@ window.addEventListener('load', () => {
 
             // Authenticate with the server
             if (snesSocket && snesSocket.readyState === WebSocket.OPEN){
-              getFromAddress(0xE00000 + 0x2000, 0x15, async (data) => {
+              getFromAddress(ROMNAME_START, ROMNAME_SIZE, async (data) => {
                 const connectionData = {
                   cmd: 'Connect',
                   game: 'A Link to the Past',
@@ -78,6 +81,21 @@ window.addEventListener('load', () => {
 
             // Save the list of players provided by the server
             players = command.players;
+
+            snesWatcherInterval = setInterval(() => {
+              // TODO: Reference LttPClient.py line 878. What am I doing with this data? How much is stored in it?
+              getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
+                console.log(results);
+                console.log(await results.slice(0, 1).text());
+                console.log(await results.slice(1, 2).text());
+                console.log(await results.slice(2, 3).text());
+                console.log(await results.slice(3, 4).text());
+                console.log(await results.slice(4, 5).text());
+                console.log(await results.slice(5, 6).text());
+                console.log(await results.slice(6, 7).text());
+                console.log(await results.slice(7).text());
+              });
+            }, 5000);
             break;
 
           case 'ConnectionRefused':
@@ -90,7 +108,7 @@ window.addEventListener('load', () => {
             break;
 
           case 'ReceivedItems':
-            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            receivedItems = command.items;
             break;
 
           case 'LocationInfo':
@@ -143,6 +161,12 @@ window.addEventListener('load', () => {
       serverStatus.classList.remove('connected');
       serverStatus.innerText = 'Not Connected';
       serverStatus.classList.add('disconnected');
+
+      // Don't bother querying the snes if the server is disconnected
+      if (snesWatcherInterval) {
+        clearInterval(snesWatcherInterval);
+        snesWatcherInterval = null;
+      }
 
       if (!event.target.wasClean) {
         console.log(event);

@@ -88,7 +88,6 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
   snesSocket.onmessage = (event) => {
     const data = (event.data instanceof Blob) ?
       event.data : (JSON.parse(event.data)).Results;
-    console.log(`Received: ${data}`);
 
     currentRequest.callback(data);
     currentRequest = null;
@@ -207,7 +206,7 @@ const initializeRequestQueue = () => {
 
     // Only lock the queue if a response is expected
     queueLocked = currentRequest.callback !== null;
-  }, 25)
+  }, 60) // Literally the fastest QUsb2SNES can go
 };
 
 const sendRequest = (data, callback=null, dataType='json') => {
