@@ -13,7 +13,8 @@ const SAVEDATA_START = WRAM_START + 0xF000;
 const SAVEDATA_SIZE = 0x500;
 
 // Received items are sent to the client as an array when it connects to the server. This array is sent in the
-// same order every time. To survive a client restart, the index of the last item sent to the SNES is stored in the ROM
+// same order every time. To survive a client restart, the index of the last item sent to the SNES is stored in the ROM.
+// This also allows the client to re-send items to the dirty cheaters who rewind their game.
 const RECEIVED_ITEMS_INDEX = SAVEDATA_START + 0x4D0; // 2 bytes
 
 // Location to write data when sending an item to a player

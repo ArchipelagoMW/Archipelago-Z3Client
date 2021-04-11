@@ -1,4 +1,4 @@
-let receivedItems = [];
+let itemsReceived = [];
 let snesWatcherInterval = null;
 
 window.addEventListener('load', () => {
@@ -82,18 +82,49 @@ window.addEventListener('load', () => {
             // Save the list of players provided by the server
             players = command.players;
 
+            // Save information about the current player
+            playerTeam = command.team;
+            playerSlot = command.slot;
+
             snesWatcherInterval = setInterval(() => {
-              // TODO: Reference LttPClient.py line 878. What am I doing with this data? How much is stored in it?
+              // Fetch information from the SNES about items it has received, and compare that against local data
               getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
-                console.log(results);
-                console.log(await results.slice(0, 1).text());
-                console.log(await results.slice(1, 2).text());
-                console.log(await results.slice(2, 3).text());
-                console.log(await results.slice(3, 4).text());
-                console.log(await results.slice(4, 5).text());
-                console.log(await results.slice(5, 6).text());
-                console.log(await results.slice(6, 7).text());
-                console.log(await results.slice(7).text());
+                const byteBuffer = await results.arrayBuffer();
+                const byteView = new DataView(byteBuffer);
+                const romItemsReceived = byteView.getUint8(0) | (byteView.getUint8(1) << 8);
+                const linkHoldingUpItem = byteView.getUint8(2);
+                const roomId = byteView.getUint8(4) | (byteView.getUint8(5) << 8);
+                const roomData = byteView.getUint8(6);
+                const scoutLocation = byteView.getUint8(7);
+
+                // If there are still items needing to be sent, and Link is not in the middle of receiving something,
+                // send the item to the SNES
+                if ((romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
+                  // Increment the counter of items sent to the ROM
+                  // TODO: Counter is not being properly incremented
+                  const indexBuffer = new ArrayBuffer(2);
+                  const indexView = new DataView(indexBuffer);
+                  indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
+                  indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
+                  putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
+
+                  // Send the item to the SNES
+                  const itemBuffer = new ArrayBuffer(1);
+                  const itemView = new DataView(itemBuffer);
+                  itemView.setUint8(0, itemsReceived[romItemsReceived].item);
+                  putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemView]));
+
+                  // Tell the SNES the id of the player who sent the item
+                  const senderBuffer = new ArrayBuffer(1);
+                  const senderView = new DataView(senderBuffer);
+                  senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
+                    0 : itemsReceived[romItemsReceived].player)
+                  putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
+                }
+
+                if (scoutLocation) {
+                  // TODO: Implement this later
+                }
               });
             }, 5000);
             break;
@@ -108,7 +139,7 @@ window.addEventListener('load', () => {
             break;
 
           case 'ReceivedItems':
-            receivedItems = command.items;
+            itemsReceived = command.items;
             break;
 
           case 'LocationInfo':
