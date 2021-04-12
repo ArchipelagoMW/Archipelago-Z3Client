@@ -16,7 +16,7 @@ window.addEventListener('load', () => {
     if (event.key !== 'Enter') { return; }
 
     if (!snesSocket || snesSocket.readyState !== WebSocket.OPEN){
-      // TODO: Warn the user in some way. Probably print to the console
+      appendConsoleMessage('Unable to connect to server while SNES is not attached.');
       return;
     }
 
@@ -169,6 +169,8 @@ window.addEventListener('load', () => {
                     if (scoutLocation) {
                       // TODO: Implement this later
                     }
+
+                    // TODO: track_locations LttPClient.py:738
 
                     snesWatcherLock = false;
                   });
