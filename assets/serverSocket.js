@@ -1,5 +1,14 @@
 let itemsReceived = [];
 let snesWatcherInterval = null;
+let snesWatcherLock = false;
+let gameComplete = false;
+
+const CLIENT_STATUS = {
+  CLIENT_UNKNOWN: 0,
+  CLIENT_READY: 10,
+  CLIENT_PLAYING: 20,
+  CLIENT_GOAL: 30,
+};
 
 window.addEventListener('load', () => {
   // Handle server address change
@@ -87,45 +96,85 @@ window.addEventListener('load', () => {
             playerSlot = command.slot;
 
             snesWatcherInterval = setInterval(() => {
-              // Fetch information from the SNES about items it has received, and compare that against local data
-              getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
-                const byteBuffer = await results.arrayBuffer();
-                const byteView = new DataView(byteBuffer);
-                const romItemsReceived = byteView.getUint8(0) | (byteView.getUint8(1) << 8);
-                const linkHoldingUpItem = byteView.getUint8(2);
-                const roomId = byteView.getUint8(4) | (byteView.getUint8(5) << 8);
-                const roomData = byteView.getUint8(6);
-                const scoutLocation = byteView.getUint8(7);
+              snesWatcherLock = true;
 
-                // If there are still items needing to be sent, and Link is not in the middle of receiving something,
-                // send the item to the SNES
-                if ((romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
-                  // Increment the counter of items sent to the ROM
-                  const indexBuffer = new ArrayBuffer(2);
-                  const indexView = new DataView(indexBuffer);
-                  indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
-                  indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
-                  putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
+              if (gameComplete) {
+                clearInterval(snesWatcherInterval);
+                snesWatcherLock = false;
+                return;
+              }
 
-                  // Send the item to the SNES
-                  const itemBuffer = new ArrayBuffer(1);
-                  const itemView = new DataView(itemBuffer);
-                  itemView.setUint8(0, itemsReceived[romItemsReceived].item);
-                  putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemView]));
-
-                  // Tell the SNES the id of the player who sent the item
-                  const senderBuffer = new ArrayBuffer(1);
-                  const senderView = new DataView(senderBuffer);
-                  senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
-                    0 : itemsReceived[romItemsReceived].player)
-                  putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
+              getFromAddress(WRAM_START + 0x10, 0x01, async (gameMode) => {
+                const modeBuffer = await gameMode.arrayBuffer();
+                const modeView = new DataView(modeBuffer);
+                const modeValue = modeView.getUint8(0);
+                // If game mode is unknown or not present, do not attempt to fetch or write data to the SNES
+                if (!modeValue || (INGAME_MODES.indexOf(modeValue) === -1 && ENDGAME_MODES.indexOf(modeValue) === -1)) {
+                  snesWatcherLock = false;
+                  return;
                 }
 
-                if (scoutLocation) {
-                  // TODO: Implement this later
-                }
+                getFromAddress(SAVEDATA_START + 0x443, 0x01, async (gameOver) => {
+                  const gameOverBuffer = await gameOver.arrayBuffer();
+                  const gameOverView = new DataView(gameOverBuffer);
+                  const gameOverValue = gameOverView.getUint8(0);
+                  if (gameOverValue || ENDGAME_MODES.indexOf(modeValue) > -1) {
+                    // If the game has ended or the payer has acquired the triforce, stop interacting with the SNES
+                    if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                      serverSocket.send(JSON.stringify([{
+                        cmd: 'StatusUpdate',
+                        status: CLIENT_STATUS.CLIENT_GOAL,
+                      }]));
+                    }
+
+                    gameComplete = true;
+                    snesWatcherLock = false;
+                    return;
+                  }
+
+                  // Fetch information from the SNES about items it has received, and compare that against local data
+                  getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
+                    const byteBuffer = await results.arrayBuffer();
+                    const byteView = new DataView(byteBuffer);
+                    const romItemsReceived = byteView.getUint8(0) | (byteView.getUint8(1) << 8);
+                    const linkHoldingUpItem = byteView.getUint8(2);
+                    const roomId = byteView.getUint8(4) | (byteView.getUint8(5) << 8);
+                    const roomData = byteView.getUint8(6);
+                    const scoutLocation = byteView.getUint8(7);
+
+                    // If there are still items needing to be sent, and Link is not in the middle of
+                    // receiving something, send the item to the SNES
+                    if ((romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
+                      // Increment the counter of items sent to the ROM
+                      const indexBuffer = new ArrayBuffer(2);
+                      const indexView = new DataView(indexBuffer);
+                      indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
+                      indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
+                      putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
+
+                      // Send the item to the SNES
+                      const itemBuffer = new ArrayBuffer(1);
+                      const itemView = new DataView(itemBuffer);
+                      itemView.setUint8(0, itemsReceived[romItemsReceived].item);
+                      putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemView]));
+
+                      // Tell the SNES the id of the player who sent the item
+                      const senderBuffer = new ArrayBuffer(1);
+                      const senderView = new DataView(senderBuffer);
+                      senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
+                        0 : itemsReceived[romItemsReceived].player)
+                      putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
+                    }
+
+                    if (scoutLocation) {
+                      // TODO: Implement this later
+                    }
+
+                    snesWatcherLock = false;
+                  });
+                });
               });
-            });
+            }, 10000);
             break;
 
           case 'ConnectionRefused':
