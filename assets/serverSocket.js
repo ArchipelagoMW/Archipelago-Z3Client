@@ -2,6 +2,8 @@ let itemsReceived = [];
 let snesWatcherInterval = null;
 let snesWatcherLock = false;
 let gameComplete = false;
+let checkedLocations = [];
+let missingLocations = [];
 
 const CLIENT_STATUS = {
   CLIENT_UNKNOWN: 0,
@@ -81,7 +83,9 @@ window.addEventListener('load', () => {
             break;
 
           case 'Connected':
-            // TODO: Handle missing locations sent from server
+            // Store the reported location check data from the server. They are arrays of locationIds
+            checkedLocations = commands.checked_locations;
+            missingLocations = commands.missing_locations;
 
             // Update header text
             serverStatus.classList.remove('disconnected');
