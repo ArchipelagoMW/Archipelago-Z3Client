@@ -30,6 +30,7 @@ const SCOUTREPLY_LOCATION_ADDR = SAVEDATA_START + 0x4D8; // 1 byte
 const SCOUTREPLY_ITEM_ADDR = SAVEDATA_START + 0x4D9; // 1 byte
 const SCOUTREPLY_PLAYER_ADDR = SAVEDATA_START + 0x4DA; // 1 byte
 const SHOP_ADDR = SAVEDATA_START + 0x302; // 2 bytes
+const SHOP_ID_START = 0x400000
 
 const UNDERWORLD_LOCATIONS = {
   "Blind's Hideout - Top": [0x11d, 0x10],
@@ -290,4 +291,141 @@ const MISC_LOCATIONS = {
   'Purple Chest': [0x3c9, 0x10],
   "Link's Uncle": [0x3c6, 0x1],
   'Hobo': [0x3c9, 0x1]
+};
+
+const SHOP_TYPES = {
+  Shop: 0,
+  TakeAny: 1,
+  UpgradeShop: 2
+}
+
+SHOP_INVENTORY_DEFAULTS = {
+  lightWorld: [
+    { name: 'Red Potion', cost: 150, limit: null },
+    { name: 'Small Heart', cost: 10, limit: null },
+    { name: 'Bombs (10)', cost: 50, limit: null },
+  ],
+  darkWorld: [
+    { name: 'Red Potion', cost: 150, limit: null },
+    { name: 'Blue Shield', cost: 50, limit: null },
+    { name: 'Bombs (10)', cost: 50, limit: null },
+  ],
+  inverted: [
+    { name: 'Blue Potion', cost: 160, limit: null },
+    { name: 'Blue Shield', cost: 50, limit: null },
+    { name: 'Bombs (10)', cost: 50, limit: null },
+  ],
+}
+
+const SHOPS = {
+  'Cave Shop (Dark Death Mountain)': {
+    locationId: 0x0112,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.lightWorld,
+    sramOffset: 0,
+  },
+  'Red Shield Shop': {
+    locationId: 0x0110,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: [
+      { name: 'Red Shield', cost: 500, limit: null },
+      { name: 'Bee', cost: 10, limit: null },
+      { name: 'Arrows (10)', cost: 30, limit: null },
+    ],
+    sramOffset: 3,
+  },
+  'Dark Lake Hylia Shop': {
+    locationId: 0x010F,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.darkWorld,
+    sramOffset: 6,
+  },
+  'Dark World Lumberjack Shop': {
+    locationId: 0x010F,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.darkWorld,
+    sramOffset: 9,
+  },
+  'Village of Outcasts Shop': {
+    locationId: 0x010F,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.darkWorld,
+    sramOffset: 12,
+  },
+  'Dark World Potion Shop': {
+    locationId: 0x010F,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xC1,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.darkWorld,
+    sramOffset: 15,
+  },
+  'Light World Death Mountain Shop': {
+    locationId: 0x00FF,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xA0,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.lightWorld,
+    sramOffset: 18,
+  },
+  'Kakariko Shop': {
+    locationId: 0x011F,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xA0,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.lightWorld,
+    sramOffset: 21,
+  },
+  'Cave Shop (Lake Hylia)': {
+    locationId: 0x0112,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xA0,
+    custom: true,
+    locked: false,
+    items: SHOP_INVENTORY_DEFAULTS.lightWorld,
+    sramOffset: 24,
+  },
+  'Potion Shop': {
+    locationId: 0x0109,
+    type: SHOP_TYPES.Shop,
+    shopkeeper: 0xA0,
+    custom: true,
+    locked: true,
+    items: [
+      { name: 'Red Potion', cost: 120, limit: null },
+      { name: 'Green Potion', cost: 60, limit: null },
+      { name: 'Blue Potion', cost: 160, limit: null },
+    ],
+    sramOffset: 27,
+  },
+  'Capacity Upgrade': {
+    locationId: 0x0115,
+    type: SHOP_TYPES.UpgradeShop,
+    shopkeeper: 0x04,
+    custom: true,
+    locked: true,
+    items: [
+      { name: 'Bomb Upgrade (+5)', cost: 100, limit: 8 },
+      { name: 'Arrow Upgrade (+5)', cost: 100, limit: 8 },
+    ],
+    sramOffset: 30,
+  }
 };

@@ -100,6 +100,9 @@ window.addEventListener('load', () => {
             playerTeam = command.team;
             playerSlot = command.slot;
 
+            // Create an array containing only shopIds
+            const shopIds = Object.entries(SHOPS).map((shop) => shop.shopId);
+
             snesWatcherInterval = setInterval(() => {
               snesWatcherLock = true;
 
@@ -203,8 +206,28 @@ window.addEventListener('load', () => {
                       }
                     }
 
-                    // TODO: track_locations LttPClient.py:738
+                    // Keep track of all new location checks
+                    const newChecks = [];
 
+                    // If the player is currently inside a shop
+                    if (shopIds.indexOf(roomId) > -1) {
+                      // Request shop data from every shop in the game
+                      const requestLength = (Object.keys(SHOPS).length * 3) + 5;
+                      getFromAddress(SHOP_ADDR, requestLength, (results) => {
+                        const shopBuffer = results.arrayBuffer();
+                        const shopView = new DataView(shopBuffer);
+                        // Update the purchase status of every item in every shop. This is important because
+                        // multiple shops can sell the same item, like a quiver when in retro mode
+                        for (let index of requestLength) {
+                          if (shopView.getUint8(index) && checkedLocations.indexOf(SHOP_ID_START + index) > -1) {
+                            sendLocationChecks([SHOP_ID_START + index])
+                          }
+                        }
+                      });
+                    }
+
+                    // TODO: track_locations LttPClient.py:758
+                    sendLocationChecks(newChecks);
                     snesWatcherLock = false;
                   });
                 });
@@ -334,5 +357,47 @@ const updateLocationCache = () => {
   if (!serverSocket || serverSocket.readyState !== WebSocket.OPEN) { return; }
   serverSocket.send(JSON.stringify([{
     cmd: 'GetDataPackage',
+  }]));
+};
+
+const lookupLocationName = (locationId) => {
+  for (const locationName of Object.keys(UNDERWORLD_LOCATIONS)) {
+    if (UNDERWORLD_LOCATIONS[locationName][0] === locationId) {
+      return locationName;
+    }
+  }
+
+  for (const locationName of Object.keys(OVERWORLD_LOCATIONS)) {
+    if (OVERWORLD_LOCATIONS[locationName] === locationId) {
+      return locationName;
+    }
+  }
+
+  for (const locationName of Object.keys(NPC_LOCATIONS)) {
+    if (NPC_LOCATIONS[locationName] === locationId) {
+      return locationName;
+    }
+  }
+
+  for (const locationName of Object.keys(MISC_LOCATIONS)) {
+    if (MISC_LOCATIONS[locationName][0] === locationId) {
+      return locationName;
+    }
+  }
+
+  for (const locationName of Object.keys(SHOPS)) {
+    if (SHOPS[locationName].locationId === locationId) {
+      return locationName;
+    }
+  }
+
+  return 'Unknown Location';
+};
+
+const sendLocationChecks = (locationIds) => {
+  locationIds.forEach((id) => checkedLocations.append(id));
+  serverSocket.send(JSON.stringify([{
+    cmd: 'LocationChecks',
+    locations: locationIds,
   }]));
 };
