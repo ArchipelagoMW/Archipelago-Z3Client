@@ -152,7 +152,7 @@ const getFromAddress = (hexOffset, byteCountInHex, callback) => {
 };
 
 /**
- * Retrieve data from a SNES device.
+ * Write data to a SNES device.
  * QUsb2SNES (may it forever burn in /dev/null) requires that when requesting an
  * address and byte count, those arguments are provided as hexadecimal numbers formatted as strings, and without their
  * preceding 0x. So 0x15 should be provided as "15".

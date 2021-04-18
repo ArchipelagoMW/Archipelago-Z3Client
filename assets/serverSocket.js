@@ -4,6 +4,7 @@ let snesWatcherLock = false;
 let gameComplete = false;
 let checkedLocations = [];
 let missingLocations = [];
+const scoutedLocations = {};
 
 const CLIENT_STATUS = {
   CLIENT_UNKNOWN: 0,
@@ -160,7 +161,7 @@ window.addEventListener('load', () => {
                       const itemBuffer = new ArrayBuffer(1);
                       const itemView = new DataView(itemBuffer);
                       itemView.setUint8(0, itemsReceived[romItemsReceived].item);
-                      putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemView]));
+                      putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemBuffer]));
 
                       // Tell the SNES the id of the player who sent the item
                       const senderBuffer = new ArrayBuffer(1);
@@ -170,8 +171,36 @@ window.addEventListener('load', () => {
                       putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
                     }
 
-                    if (scoutLocation) {
-                      // TODO: Implement this later
+                    // If the player's current location has a scout item (an item laying on the ground), we need to
+                    // send that item's ID to the server so it can tell us what that item is, then we need to update
+                    // the SNES with the item data. This is mostly useful for remote item games, which Z3 does not
+                    // yet implement, but may in the future.
+                    if (scoutLocation > 0){
+                      // If the scouted item is not in the list of scouted locations stored by the client, send
+                      // the scout data to the server
+                      if (!scoutedLocations.hasOwnProperty(scoutLocation)) {
+                        serverSocket.send(JSON.stringify([{
+                          cmd: 'LocationScouts',
+                          locations: [scoutLocation],
+                        }]));
+                      } else {
+                        // If the scouted item is present in the list of scout locations stored by the client, we
+                        // update the SNES with information about the item
+                        const locationDataBuffer = new ArrayBuffer(1);
+                        const locationDataView = new DataView(locationDataBuffer);
+                        locationDataView.setUint8(0, scoutLocation);
+                        putToAddress(SCOUTREPLY_LOCATION_ADDR, new Blob([locationDataBuffer]));
+
+                        const itemDataBuffer = new ArrayBuffer(1);
+                        const itemDataView = new DataView(itemDataBuffer);
+                        itemDataView.setUint8(0, scoutedLocations[scoutLocation].item);
+                        putToAddress(SCOUTREPLY_ITEM_ADDR, new Blob([itemDataBuffer]));
+
+                        const playerDataBuffer = new ArrayBuffer(1);
+                        const playerDataView = new DataView(playerDataBuffer);
+                        playerDataView.setUint8(0, scoutedLocations[scoutLocation].player);
+                        putToAddress(SCOUTREPLY_PLAYER_ADDR, new Blob([playerDataBuffer]));
+                      }
                     }
 
                     // TODO: track_locations LttPClient.py:738
@@ -193,11 +222,23 @@ window.addEventListener('load', () => {
             break;
 
           case 'ReceivedItems':
+            // Save received items in the array of items to be sent to the SNES
             command.items.forEach((item) => itemsReceived.push(item));
             break;
 
           case 'LocationInfo':
-            console.log(`Unhandled event received: ${JSON.stringify(command)}`);
+            // This packed is received as a confirmation from the server that a location has been scouted.
+            // Once the server confirms a scout, it sends the confirmed data back to the client. Here, we
+            // store the confirmed scouted locations in an object.
+            command.locations.forEach((location) => {
+              // location = [ item, location, player ]
+              if (!scoutedLocations.hasOwnProperty(location.location)) {
+                scoutedLocations[location.location] = {
+                  item: location[0],
+                  player: location[2],
+                };
+              }
+            });
             break;
 
           case 'RoomUpdate':
