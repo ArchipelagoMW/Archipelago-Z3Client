@@ -28,5 +28,8 @@ let playerTeam = null;
 let players = [];
 
 // Location and item maps, populated from localStorage
-let locationMap = {};
-let itemMap = {};
+let itemsById = {};
+
+// Prebuilt maps of item/location data to prevent doing work more than once
+const locationsById = {};
+const locationsByRoomId = {};

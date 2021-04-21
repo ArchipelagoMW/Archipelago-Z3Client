@@ -33,6 +33,7 @@ const SHOP_ADDR = SAVEDATA_START + 0x302; // 2 bytes
 const SHOP_ID_START = 0x400000
 
 const UNDERWORLD_LOCATIONS = {
+  // "Location Name": [roomId, mask]
   "Blind's Hideout - Top": [0x11d, 0x10],
   "Blind's Hideout - Left": [0x11d, 0x20],
   "Blind's Hideout - Right": [0x11d, 0x40],

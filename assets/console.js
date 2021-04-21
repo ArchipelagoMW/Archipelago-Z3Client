@@ -40,6 +40,7 @@ const appendConsoleMessage = (message) => {
   messageDiv.classList.add('console-output');
   messageDiv.innerText = message;
   monitor.appendChild(messageDiv);
+  monitor.scrollTo({ top: monitor.innerHeight });
 };
 
 const appendFormattedConsoleMessage = (messageParts) => {
@@ -64,11 +65,11 @@ const appendFormattedConsoleMessage = (messageParts) => {
           break;
         case 'item_id':
           span.style.color = '#fc5252';
-          span.innerText = itemMap[part.text];
+          span.innerText = itemsById[part.text];
           break;
         case 'location_id':
           span.style.color = '#5ea2c1';
-          span.innerText = locationMap[part.text];
+          span.innerText = locationsById[part.text];
           break;
         default:
           span.innerText = part.text;

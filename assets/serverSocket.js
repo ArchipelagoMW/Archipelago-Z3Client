@@ -1,9 +1,15 @@
 let itemsReceived = [];
+
+// Control variable for the SNES watcher. Contains an interval (see MDN: setInterval)
 let snesWatcherInterval = null;
 let snesWatcherLock = false;
 let gameComplete = false;
+
+// Location Ids provided by the server
 let checkedLocations = [];
 let missingLocations = [];
+
+// Data about remote items
 const scoutedLocations = {};
 
 const CLIENT_STATUS = {
@@ -62,8 +68,8 @@ window.addEventListener('load', () => {
               updateLocationCache();
             } else {
               // Load the location and item maps into memory
-              locationMap = JSON.parse(localStorage.getItem('locationMap'));
-              itemMap = JSON.parse(localStorage.getItem('itemMap'));
+              buildLocationData(JSON.parse(localStorage.getItem('locationMap')));
+              itemsById = JSON.parse(localStorage.getItem('itemMap'));
             }
 
             // Authenticate with the server
@@ -85,8 +91,8 @@ window.addEventListener('load', () => {
 
           case 'Connected':
             // Store the reported location check data from the server. They are arrays of locationIds
-            checkedLocations = commands.checked_locations;
-            missingLocations = commands.missing_locations;
+            checkedLocations = command.checked_locations;
+            missingLocations = command.missing_locations;
 
             // Update header text
             serverStatus.classList.remove('disconnected');
@@ -149,6 +155,13 @@ window.addEventListener('load', () => {
                     const roomId = byteView.getUint8(4) | (byteView.getUint8(5) << 8);
                     const roomData = byteView.getUint8(6);
                     const scoutLocation = byteView.getUint8(7);
+
+                    appendConsoleMessage(`Received data from SNES at ${new Date().getTime()}:`);
+                    appendConsoleMessage(`romItemsReceived: ${romItemsReceived}`);
+                    appendConsoleMessage(`linkHoldingUpItem: ${linkHoldingUpItem}`);
+                    appendConsoleMessage(`roomId: ${roomId}`);
+                    appendConsoleMessage(`roomData: ${roomData}`);
+                    appendConsoleMessage(`scoutLocation: ${scoutLocation}`);
 
                     // If there are still items needing to be sent, and Link is not in the middle of
                     // receiving something, send the item to the SNES
@@ -226,13 +239,15 @@ window.addEventListener('load', () => {
                       });
                     }
 
+
+
                     // TODO: track_locations LttPClient.py:758
                     sendLocationChecks(newChecks);
                     snesWatcherLock = false;
                   });
                 });
               });
-            }, 10000);
+            }, 5000);
             break;
 
           case 'ConnectionRefused':
@@ -293,8 +308,8 @@ window.addEventListener('load', () => {
               localStorage.setItem('itemMap', JSON.stringify(command.data.lookup_any_item_id_to_name));
             }
 
-            locationMap = command.data.lookup_any_location_id_to_name;
-            itemMap = command.data.lookup_any_item_id_to_name;
+            buildLocationData(command.data.lookup_any_location_id_to_name);
+            itemsById = command.data.lookup_any_item_id_to_name;
 
             break;
 
@@ -360,44 +375,75 @@ const updateLocationCache = () => {
   }]));
 };
 
-const lookupLocationName = (locationId) => {
-  for (const locationName of Object.keys(UNDERWORLD_LOCATIONS)) {
-    if (UNDERWORLD_LOCATIONS[locationName][0] === locationId) {
-      return locationName;
-    }
-  }
-
-  for (const locationName of Object.keys(OVERWORLD_LOCATIONS)) {
-    if (OVERWORLD_LOCATIONS[locationName] === locationId) {
-      return locationName;
-    }
-  }
-
-  for (const locationName of Object.keys(NPC_LOCATIONS)) {
-    if (NPC_LOCATIONS[locationName] === locationId) {
-      return locationName;
-    }
-  }
-
-  for (const locationName of Object.keys(MISC_LOCATIONS)) {
-    if (MISC_LOCATIONS[locationName][0] === locationId) {
-      return locationName;
-    }
-  }
-
-  for (const locationName of Object.keys(SHOPS)) {
-    if (SHOPS[locationName].locationId === locationId) {
-      return locationName;
-    }
-  }
-
-  return 'Unknown Location';
-};
-
 const sendLocationChecks = (locationIds) => {
   locationIds.forEach((id) => checkedLocations.append(id));
   serverSocket.send(JSON.stringify([{
     cmd: 'LocationChecks',
     locations: locationIds,
   }]));
+};
+
+/**
+ * Build two global objects which are used to reference location data
+ * @param locations An object of { locationId: locationName, ... }
+ */
+const buildLocationData = (locations) => {
+  const locationIds = Object.keys(locations);
+  const locationNames = Object.values(locations);
+
+  Object.keys(UNDERWORLD_LOCATIONS).forEach((uwLocationName) => {
+    locationsById[locationIds[locationNames.indexOf(uwLocationName)]] = {
+      name: uwLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(uwLocationName)]),
+      roomId: UNDERWORLD_LOCATIONS[uwLocationName][0],
+      mask: UNDERWORLD_LOCATIONS[uwLocationName][1],
+    }
+
+    if (!locationsByRoomId.hasOwnProperty(UNDERWORLD_LOCATIONS[uwLocationName][0])) {
+      locationsByRoomId[UNDERWORLD_LOCATIONS[uwLocationName][0]] = [];
+    }
+    locationsByRoomId[UNDERWORLD_LOCATIONS[uwLocationName][0]].push({
+      name: uwLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(uwLocationName)]),
+      roomId: UNDERWORLD_LOCATIONS[uwLocationName][0],
+      mask: UNDERWORLD_LOCATIONS[uwLocationName][1],
+    });
+  });
+
+  Object.keys(OVERWORLD_LOCATIONS).forEach((owLocationName) => {
+    locationsById[locationIds[locationNames.indexOf(owLocationName)]] = {
+      name: owLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(owLocationName)]),
+      roomId: null,
+      mask: null,
+    };
+  });
+
+  Object.keys(NPC_LOCATIONS).forEach((npcLocationName) => {
+    locationsById[locationIds[locationNames.indexOf(npcLocationName)]] = {
+      name: npcLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(npcLocationName)]),
+      roomId: null,
+      mask: null,
+    };
+  });
+
+  Object.keys(MISC_LOCATIONS).forEach((miscLocationName) => {
+    locationsById[locationIds[locationNames.indexOf(miscLocationName)]] = {
+      name: miscLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(miscLocationName)]),
+      roomId: MISC_LOCATIONS[miscLocationName][0],
+      mask: MISC_LOCATIONS[miscLocationName][1],
+    };
+
+    if (!locationsByRoomId.hasOwnProperty(MISC_LOCATIONS[miscLocationName][0])) {
+      locationsByRoomId[MISC_LOCATIONS[miscLocationName][0]] = [];
+    }
+    locationsByRoomId[MISC_LOCATIONS[miscLocationName][0]].push({
+      name: miscLocationName,
+      locationId: Number(locationIds[locationNames.indexOf(miscLocationName)]),
+      roomId: MISC_LOCATIONS[miscLocationName][0],
+      mask: MISC_LOCATIONS[miscLocationName][1],
+    });
+  });
 };
