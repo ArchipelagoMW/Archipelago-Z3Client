@@ -40,7 +40,7 @@ const appendConsoleMessage = (message) => {
   messageDiv.classList.add('console-output');
   messageDiv.innerText = message;
   monitor.appendChild(messageDiv);
-  monitor.scrollTo({ top: monitor.innerHeight });
+  messageDiv.scrollIntoView(false);
 };
 
 const appendFormattedConsoleMessage = (messageParts) => {

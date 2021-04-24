@@ -1,3 +1,5 @@
+// noinspection JSBitwiseOperatorUsage
+
 let itemsReceived = [];
 
 // Control variable for the SNES watcher. Contains an interval (see MDN: setInterval)
@@ -146,7 +148,8 @@ window.addEventListener('load', () => {
                     return;
                   }
 
-                  // Fetch information from the SNES about items it has received, and compare that against local data
+                  // Fetch information from the SNES about items it has received, and compare that against local data.
+                  // This fetch includes data about the room the player is currently inside of
                   getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
                     const byteBuffer = await results.arrayBuffer();
                     const byteView = new DataView(byteBuffer);
@@ -219,9 +222,6 @@ window.addEventListener('load', () => {
                       }
                     }
 
-                    // Keep track of all new location checks
-                    const newChecks = [];
-
                     // If the player is currently inside a shop
                     if (shopIds.indexOf(roomId) > -1) {
                       // Request shop data from every shop in the game
@@ -239,11 +239,20 @@ window.addEventListener('load', () => {
                       });
                     }
 
+                    // TODO: This does not seem to work for any items. What does it do?
                     locationsByRoomId[roomId].forEach((room) => {
-                      // TODO: Identify the checks in this room and notify the server if any new checks were performed
+                      // Identify the checks in this room and notify the server if any new checks were performed
+                      if (checkedLocations.indexOf(room.locationId) > -1) { return; }
+                      if ((roomData << 4) & room.mask !== 0) {
+                        sendLocationChecks([room.locationId]);
+                      }
                     });
 
-                    // TODO: track_locations LttPClient.py:758
+
+
+                    // TODO: track_locations LttPClient.py:767
+
+                    // Notify the server of new checks performed
                     sendLocationChecks(newChecks);
                     snesWatcherLock = false;
                   });
