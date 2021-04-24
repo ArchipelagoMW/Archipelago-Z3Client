@@ -239,7 +239,9 @@ window.addEventListener('load', () => {
                       });
                     }
 
-
+                    locationsByRoomId[roomId].forEach((room) => {
+                      // TODO: Identify the checks in this room and notify the server if any new checks were performed
+                    });
 
                     // TODO: track_locations LttPClient.py:758
                     sendLocationChecks(newChecks);
