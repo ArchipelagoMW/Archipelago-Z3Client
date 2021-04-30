@@ -226,8 +226,8 @@ window.addEventListener('load', () => {
                     if (shopIds.indexOf(roomId) > -1) {
                       // Request shop data from every shop in the game
                       const requestLength = (Object.keys(SHOPS).length * 3) + 5;
-                      getFromAddress(SHOP_ADDR, requestLength, (results) => {
-                        const shopBuffer = results.arrayBuffer();
+                      getFromAddress(SHOP_ADDR, requestLength, async (results) => {
+                        const shopBuffer = await results.arrayBuffer();
                         const shopView = new DataView(shopBuffer);
                         // Update the purchase status of every item in every shop. This is important because
                         // multiple shops can sell the same item, like a quiver when in retro mode
@@ -239,7 +239,78 @@ window.addEventListener('load', () => {
                       });
                     }
 
-                    // TODO: track_locations LttPClient.py:767
+                    // If there are new checks in this room, send them to the server
+                    for (const location of locationsByRoomId['underworld'][roomId]) {
+                      if (checkedLocations.indexOf(location.roomId) > -1) { continue; }
+                      if ((roomData << 4) & location.mask !== 0) { sendLocationChecks([location.locationId]); }
+                    }
+
+                    // In the below loops, the entire SNES data is pulled to see if any items have already
+                    // been obtained. The client must do this because it's possible for a player to begin
+                    // picking up items before they connect to the server. It must then continue to do this
+                    // because it's possible for a player to disconnect, pick up items, then reconnect
+
+                    // Look for any obtained items in the underworld, and send those to the server if they have
+                    // not been sent already. Also track the earliest unavailable data, as we will fetch it later
+                    let underworldBegin = 0x129;
+                    let underworldEnd = 0;
+                    const underworldMissing = [];
+                    for (const item of Object.values(locationsById['underworld'])) {
+                      if (checkedLocations.indexOf(item.locationId) > -1) { continue; }
+                      underworldMissing.push(item);
+                      underworldBegin = Math.min(underworldBegin, item.roomId);
+                      underworldEnd = Math.max(underworldEnd, item.roomId + 1);
+                    }
+                    // The data originally fetched may not cover all of the underworld items, so the client needs to
+                    // fetch the remaining items to see if they have been previously obtained
+                    if (underworldBegin < underworldEnd) {
+                      getFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2,
+                        async (results) => {
+                          const newChecks = [];
+                          const resultBuffer = await results.arrayBuffer();
+                          const resultView = new DataView(resultBuffer)
+                          for (const item of underworldMissing) {
+                            if (item.mask === 0) { continue; }
+                            const dataOffset = (item.roomId - underworldBegin) * 2;
+                            if (resultView.getUint8(dataOffset) | resultView.getUint8(dataOffset + 1) << 8) {
+                              newChecks.push(item.locationId);
+                            }
+                          }
+                          // Send new checks if there are any
+                          if (newChecks.length > 0) { sendLocationChecks(newChecks); }
+                        });
+                    }
+
+                    // Look for any obtained items in the overworld, and send those to the server if they have
+                    // not been sent already. Also track the earliest unavailable data, as we will fetch it later
+                    let overworldBegin = 0x82;
+                    let overworldEnd = 0;
+                    const overworldMissing = [];
+                    for (const item of Object.entries(locationsById['overworld'])) {
+                      if (checkedLocations.indexOf(item.locationId)) { continue; }
+                      overworldMissing.push(item);
+                      overworldBegin = Math.min(overworldBegin, item.screenId);
+                      overworldEnd = Math.max(overworldEnd, item.screenId + 1);
+                    }
+                    // The data originally fetched may not cover all of the overworld items, so the client needs to
+                    // fetch the remaining items to see if they have been previously obtained
+                    if (overworldBegin < overworldEnd) {
+                      getFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin,
+                        async (results) => {
+                          const newChecks = [];
+                          const resultBuffer = await results.arrayBuffer();
+                          const resultView = new DataView(resultBuffer);
+                          for (const item of overworldMissing) {
+                            if (resultView.getUint8(item.screenId - overworldBegin) & 0x410 !== 0) {
+                              newChecks.push(item.locationId);
+                            }
+                          }
+                          // Send new checks if there are any
+                          if (newChecks.length > 0) { sendLocationChecks(newChecks); }
+                        });
+                    }
+
+                    // TODO: track_locations LttPClient.py:801
 
                     // TODO: Notify the server of new checks performed
                     // sendLocationChecks(newChecks);
@@ -414,7 +485,7 @@ const buildLocationData = (locations) => {
     locationsById['overworld'][locationIds[locationNames.indexOf(owLocationName)]] = {
       name: owLocationName,
       locationId: Number(locationIds[locationNames.indexOf(owLocationName)]),
-      roomId: null,
+      screenId: OVERWORLD_LOCATIONS[owLocationName],
       mask: null,
     };
   });
@@ -423,7 +494,7 @@ const buildLocationData = (locations) => {
     locationsById['npc'][locationIds[locationNames.indexOf(npcLocationName)]] = {
       name: npcLocationName,
       locationId: Number(locationIds[locationNames.indexOf(npcLocationName)]),
-      roomId: null,
+      screenId: NPC_LOCATIONS[npcLocationName],
       mask: null,
     };
   });
