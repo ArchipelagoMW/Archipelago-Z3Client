@@ -31,5 +31,15 @@ let players = [];
 let itemsById = {};
 
 // Prebuilt maps of item/location data to prevent doing work more than once
-const locationsById = {};
-const locationsByRoomId = {};
+const locationsById = {
+  underworld: {},
+  overworld: {},
+  npc: {},
+  misc: {},
+};
+const locationsByRoomId = {
+  underworld: {},
+  overworld: {},
+  npc: {},
+  misc: {},
+};

@@ -239,21 +239,10 @@ window.addEventListener('load', () => {
                       });
                     }
 
-                    // TODO: This does not seem to work for any items. What does it do?
-                    locationsByRoomId[roomId].forEach((room) => {
-                      // Identify the checks in this room and notify the server if any new checks were performed
-                      if (checkedLocations.indexOf(room.locationId) > -1) { return; }
-                      if ((roomData << 4) & room.mask !== 0) {
-                        sendLocationChecks([room.locationId]);
-                      }
-                    });
-
-
-
                     // TODO: track_locations LttPClient.py:767
 
-                    // Notify the server of new checks performed
-                    sendLocationChecks(newChecks);
+                    // TODO: Notify the server of new checks performed
+                    // sendLocationChecks(newChecks);
                     snesWatcherLock = false;
                   });
                 });
@@ -403,17 +392,17 @@ const buildLocationData = (locations) => {
   const locationNames = Object.values(locations);
 
   Object.keys(UNDERWORLD_LOCATIONS).forEach((uwLocationName) => {
-    locationsById[locationIds[locationNames.indexOf(uwLocationName)]] = {
+    locationsById['underworld'][locationIds[locationNames.indexOf(uwLocationName)]] = {
       name: uwLocationName,
       locationId: Number(locationIds[locationNames.indexOf(uwLocationName)]),
       roomId: UNDERWORLD_LOCATIONS[uwLocationName][0],
       mask: UNDERWORLD_LOCATIONS[uwLocationName][1],
     }
 
-    if (!locationsByRoomId.hasOwnProperty(UNDERWORLD_LOCATIONS[uwLocationName][0])) {
-      locationsByRoomId[UNDERWORLD_LOCATIONS[uwLocationName][0]] = [];
+    if (!locationsByRoomId['underworld'].hasOwnProperty(UNDERWORLD_LOCATIONS[uwLocationName][0])) {
+      locationsByRoomId['underworld'][UNDERWORLD_LOCATIONS[uwLocationName][0]] = [];
     }
-    locationsByRoomId[UNDERWORLD_LOCATIONS[uwLocationName][0]].push({
+    locationsByRoomId['underworld'][UNDERWORLD_LOCATIONS[uwLocationName][0]].push({
       name: uwLocationName,
       locationId: Number(locationIds[locationNames.indexOf(uwLocationName)]),
       roomId: UNDERWORLD_LOCATIONS[uwLocationName][0],
@@ -422,7 +411,7 @@ const buildLocationData = (locations) => {
   });
 
   Object.keys(OVERWORLD_LOCATIONS).forEach((owLocationName) => {
-    locationsById[locationIds[locationNames.indexOf(owLocationName)]] = {
+    locationsById['overworld'][locationIds[locationNames.indexOf(owLocationName)]] = {
       name: owLocationName,
       locationId: Number(locationIds[locationNames.indexOf(owLocationName)]),
       roomId: null,
@@ -431,7 +420,7 @@ const buildLocationData = (locations) => {
   });
 
   Object.keys(NPC_LOCATIONS).forEach((npcLocationName) => {
-    locationsById[locationIds[locationNames.indexOf(npcLocationName)]] = {
+    locationsById['npc'][locationIds[locationNames.indexOf(npcLocationName)]] = {
       name: npcLocationName,
       locationId: Number(locationIds[locationNames.indexOf(npcLocationName)]),
       roomId: null,
@@ -440,17 +429,17 @@ const buildLocationData = (locations) => {
   });
 
   Object.keys(MISC_LOCATIONS).forEach((miscLocationName) => {
-    locationsById[locationIds[locationNames.indexOf(miscLocationName)]] = {
+    locationsById['misc'][locationIds[locationNames.indexOf(miscLocationName)]] = {
       name: miscLocationName,
       locationId: Number(locationIds[locationNames.indexOf(miscLocationName)]),
       roomId: MISC_LOCATIONS[miscLocationName][0],
       mask: MISC_LOCATIONS[miscLocationName][1],
     };
 
-    if (!locationsByRoomId.hasOwnProperty(MISC_LOCATIONS[miscLocationName][0])) {
-      locationsByRoomId[MISC_LOCATIONS[miscLocationName][0]] = [];
+    if (!locationsByRoomId['misc'].hasOwnProperty(MISC_LOCATIONS[miscLocationName][0])) {
+      locationsByRoomId['misc'][MISC_LOCATIONS[miscLocationName][0]] = [];
     }
-    locationsByRoomId[MISC_LOCATIONS[miscLocationName][0]].push({
+    locationsByRoomId['misc'][MISC_LOCATIONS[miscLocationName][0]].push({
       name: miscLocationName,
       locationId: Number(locationIds[locationNames.indexOf(miscLocationName)]),
       roomId: MISC_LOCATIONS[miscLocationName][0],
