@@ -116,7 +116,7 @@ window.addEventListener('load', () => {
             playerSlot = command.slot;
 
             // Create an array containing only shopIds
-            const shopIds = Object.entries(SHOPS).map((shop) => shop.shopId);
+            const shopIds = Object.values(SHOPS).map((shop) => shop.shopId);
 
             snesWatcherInterval = setInterval(() => {
               // If there is currently a pending request to the SNES, do not send more requests.
@@ -132,7 +132,6 @@ window.addEventListener('load', () => {
               }
 
               // Fetch game mode
-              console.debug('Fetching game mode');
               getFromAddress(WRAM_START + 0x10, 0x01, async (gameMode) => {
                 const modeBuffer = await gameMode.arrayBuffer();
                 const modeView = new DataView(modeBuffer);
@@ -144,7 +143,6 @@ window.addEventListener('load', () => {
                 }
 
                 // Fetch game state and triforce information
-                console.debug('Fetching game state and triforce information');
                 getFromAddress(SAVEDATA_START + 0x443, 0x01, async (gameOver) => {
                   const gameOverBuffer = await gameOver.arrayBuffer();
                   const gameOverView = new DataView(gameOverBuffer);
@@ -165,7 +163,6 @@ window.addEventListener('load', () => {
 
                   // Fetch information from the SNES about items it has received, and compare that against local data.
                   // This fetch includes data about the room the player is currently inside of
-                  console.debug('Fetching current room data');
                   getFromAddress(RECEIVED_ITEMS_INDEX, 0x08, async (results) => {
                     const byteBuffer = await results.arrayBuffer();
                     const byteView = new DataView(byteBuffer);
@@ -260,7 +257,7 @@ window.addEventListener('load', () => {
                       // If there are new checks in this room, send them to the server
                       for (const location of locationsByRoomId['underworld'][roomId]) {
                         if (checkedLocations.indexOf(location.roomId) > -1) { continue; }
-                        if ((roomData << 4) & location.mask !== 0) { sendLocationChecks([location.locationId]); }
+                        if (((roomData << 4) & location.mask) !== 0) { sendLocationChecks([location.locationId]); }
                       }
                     }
 
@@ -293,9 +290,9 @@ window.addEventListener('load', () => {
                           console.debug(resultBuffer);
                           const resultView = new DataView(resultBuffer)
                           for (const item of underworldMissing) {
-                            if (item.mask === 0) { continue; }
                             const dataOffset = (item.roomId - underworldBegin) * 2;
-                            if (resultView.getUint8(dataOffset) | resultView.getUint8(dataOffset + 1) << 8) {
+                            const roomData = resultView.getUint8(dataOffset) | (resultView.getUint8(dataOffset + 1) << 8);
+                            if (roomData & item.mask !== 0) {
                               newChecks.push(item.locationId);
                             }
                           }
@@ -310,7 +307,7 @@ window.addEventListener('load', () => {
                     let overworldBegin = 0x82;
                     let overworldEnd = 0;
                     const overworldMissing = [];
-                    for (const item of Object.entries(locationsById['overworld'])) {
+                    for (const item of Object.values(locationsById['overworld'])) {
                       if (checkedLocations.indexOf(item.locationId)) { continue; }
                       overworldMissing.push(item);
                       overworldBegin = Math.min(overworldBegin, item.screenId);
