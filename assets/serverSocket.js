@@ -244,6 +244,7 @@ window.addEventListener('load', () => {
                         const newChecks = [];
                         for (let index of requestLength) {
                           if (shopView.getUint8(index) && checkedLocations.indexOf(SHOP_ID_START + index) > -1) {
+                            console.debug(`Shop data sent: ${SHOP_ID_START + index}`);
                             newChecks.push(SHOP_ID_START + index)
                           }
                         }
@@ -256,8 +257,11 @@ window.addEventListener('load', () => {
                     if (locationsByRoomId.hasOwnProperty(roomId)) {
                       // If there are new checks in this room, send them to the server
                       for (const location of locationsByRoomId['underworld'][roomId]) {
-                        if (checkedLocations.indexOf(location.roomId) > -1) { continue; }
-                        if (((roomData << 4) & location.mask) !== 0) { sendLocationChecks([location.locationId]); }
+                        if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                        if (((roomData << 4) & location.mask) !== 0) {
+                          console.debug(`Current room sending: ${JSON.stringify(location)}`);
+                          sendLocationChecks([location.locationId]);
+                        }
                       }
                     }
 
@@ -266,34 +270,31 @@ window.addEventListener('load', () => {
                     // picking up items before they connect to the server. It must then continue to do this
                     // because it's possible for a player to disconnect, pick up items, then reconnect
 
-                    // Look for any obtained items in the underworld, and send those to the server if they have
+                    // Look for any checked locations in the underworld, and send those to the server if they have
                     // not been sent already. Also track the earliest unavailable data, as we will fetch it later
                     let underworldBegin = 0x129;
                     let underworldEnd = 0;
                     const underworldMissing = [];
-                    for (const item of Object.values(locationsById['underworld'])) {
-                      if (checkedLocations.indexOf(item.locationId) > -1) { continue; }
-                      underworldMissing.push(item);
-                      underworldBegin = Math.min(underworldBegin, item.roomId);
-                      underworldEnd = Math.max(underworldEnd, item.roomId + 1);
+                    for (const location of Object.values(locationsById['underworld'])) {
+                      if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                      underworldMissing.push(location);
+                      underworldBegin = Math.min(underworldBegin, location.roomId);
+                      underworldEnd = Math.max(underworldEnd, location.roomId + 1);
                     }
                     // The data originally fetched may not cover all of the underworld items, so the client needs to
                     // fetch the remaining items to see if they have been previously obtained
                     if (underworldBegin < underworldEnd) {
                       uwLock = true;
-                      console.debug('Fetching underworld data');
                       getFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2,
                         async (results) => {
                           const newChecks = [];
                           const resultBuffer = await results.arrayBuffer();
-                          console.debug('Underworld data');
-                          console.debug(resultBuffer);
-                          const resultView = new DataView(resultBuffer)
-                          for (const item of underworldMissing) {
-                            const dataOffset = (item.roomId - underworldBegin) * 2;
+                          const resultView = new DataView(resultBuffer);
+                          for (const location of underworldMissing) {
+                            const dataOffset = (location.roomId - underworldBegin) * 2;
                             const roomData = resultView.getUint8(dataOffset) | (resultView.getUint8(dataOffset + 1) << 8);
-                            if (roomData & item.mask !== 0) {
-                              newChecks.push(item.locationId);
+                            if ((roomData & location.mask) !== 0) {
+                              newChecks.push(location.locationId);
                             }
                           }
                           // Send new checks if there are any
@@ -302,16 +303,16 @@ window.addEventListener('load', () => {
                         });
                     }
 
-                    // Look for any obtained items in the overworld, and send those to the server if they have
+                    // Look for any checked locations in the overworld, and send those to the server if they have
                     // not been sent already. Also track the earliest unavailable data, as we will fetch it later
                     let overworldBegin = 0x82;
                     let overworldEnd = 0;
                     const overworldMissing = [];
-                    for (const item of Object.values(locationsById['overworld'])) {
-                      if (checkedLocations.indexOf(item.locationId)) { continue; }
-                      overworldMissing.push(item);
-                      overworldBegin = Math.min(overworldBegin, item.screenId);
-                      overworldEnd = Math.max(overworldEnd, item.screenId + 1);
+                    for (const location of Object.values(locationsById['overworld'])) {
+                      if (checkedLocations.indexOf(location.locationId)) { continue; }
+                      overworldMissing.push(location);
+                      overworldBegin = Math.min(overworldBegin, location.screenId);
+                      overworldEnd = Math.max(overworldEnd, location.screenId + 1);
                     }
                     // The data originally fetched may not cover all of the overworld items, so the client needs to
                     // fetch the remaining items to see if they have been previously obtained
@@ -325,9 +326,10 @@ window.addEventListener('load', () => {
                           console.debug('Overworld data');
                           console.debug(resultBuffer);
                           const resultView = new DataView(resultBuffer);
-                          for (const item of overworldMissing) {
-                            if (resultView.getUint8(item.screenId - overworldBegin) & 0x410 !== 0) {
-                              newChecks.push(item.locationId);
+                          for (const location of overworldMissing) {
+                            if (resultView.getUint8(location.screenId - overworldBegin) & 0x410 !== 0) {
+                              console.debug(`Overworld sending: ${JSON.stringify(location)}`);
+                              newChecks.push(location.locationId);
                             }
                           }
                           // Send new checks if there are any
@@ -350,6 +352,7 @@ window.addEventListener('load', () => {
                         for (const location of Object.values(locationsById['npc'])) {
                           if (checkedLocations.indexOf(location.locationId) > -1) { return; }
                           if (npcValue & location.screenId !== 0) {
+                            console.debug(`NPC sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
                         }
@@ -375,6 +378,7 @@ window.addEventListener('load', () => {
                           // console.assert(0x3c6 <= location.roomId <= 0x3c9);
                           if (checkedLocations.indexOf(location.locationId) > -1) { return; }
                           if (resultView.getUint8(location.roomId - 0x3c6) & location.mask !== 0) {
+                            console.debug(`Misc sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
                         }
