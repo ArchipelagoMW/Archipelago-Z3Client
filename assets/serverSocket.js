@@ -309,7 +309,7 @@ window.addEventListener('load', () => {
                     let overworldEnd = 0;
                     const overworldMissing = [];
                     for (const location of Object.values(locationsById['overworld'])) {
-                      if (checkedLocations.indexOf(location.locationId)) { continue; }
+                      if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
                       overworldMissing.push(location);
                       overworldBegin = Math.min(overworldBegin, location.screenId);
                       overworldEnd = Math.max(overworldEnd, location.screenId + 1);
@@ -327,7 +327,7 @@ window.addEventListener('load', () => {
                           console.debug(resultBuffer);
                           const resultView = new DataView(resultBuffer);
                           for (const location of overworldMissing) {
-                            if (resultView.getUint8(location.screenId - overworldBegin) & 0x410 !== 0) {
+                            if ((resultView.getUint8(location.screenId - overworldBegin) & 0x40) !== 0) {
                               console.debug(`Overworld sending: ${JSON.stringify(location)}`);
                               newChecks.push(location.locationId);
                             }
@@ -350,8 +350,8 @@ window.addEventListener('load', () => {
                         const npcValue = resultView.getUint8(0) | (resultView.getUint8(1) << 8);
                         const newChecks = [];
                         for (const location of Object.values(locationsById['npc'])) {
-                          if (checkedLocations.indexOf(location.locationId) > -1) { return; }
-                          if (npcValue & location.screenId !== 0) {
+                          if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                          if ((npcValue & location.screenId) !== 0) {
                             console.debug(`NPC sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
@@ -376,8 +376,8 @@ window.addEventListener('load', () => {
                           // What the hell is this assert for? It's always true based on data from romData.js
                           // Anyway, it's preserved from the original client code, but not used here
                           // console.assert(0x3c6 <= location.roomId <= 0x3c9);
-                          if (checkedLocations.indexOf(location.locationId) > -1) { return; }
-                          if (resultView.getUint8(location.roomId - 0x3c6) & location.mask !== 0) {
+                          if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                          if ((resultView.getUint8(location.roomId - 0x3c6) & location.mask) !== 0) {
                             console.debug(`Misc sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
@@ -388,7 +388,7 @@ window.addEventListener('load', () => {
                       });
                     }
 
-                    // TODO: track_locations LttPClient.py:818
+                    // Main loop is ready for repeat
                     snesWatcherLock = false;
                   });
                 });
