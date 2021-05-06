@@ -256,13 +256,15 @@ window.addEventListener('load', () => {
                     // If the current room is unknown, do nothing. This happens if no check has been made yet
                     if (locationsByRoomId.hasOwnProperty(roomId)) {
                       // If there are new checks in this room, send them to the server
+                      const newChecks = [];
                       for (const location of locationsByRoomId['underworld'][roomId]) {
                         if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
                         if (((roomData << 4) & location.mask) !== 0) {
                           console.debug(`Current room sending: ${JSON.stringify(location)}`);
-                          sendLocationChecks([location.locationId]);
+                          newChecks.push(location.locationId);
                         }
                       }
+                      sendLocationChecks(newChecks);
                     }
 
                     // In the below loops, the entire SNES data is pulled to see if any items have already
@@ -335,20 +337,23 @@ window.addEventListener('load', () => {
                     }
 
                     // If all NPC locations have not been checked, pull npc data
-                    if (checkedLocations.every((location) => Object.keys(locationsById['npc']).includes(location))) {
+                    let npcAllChecked = true;
+                    for (const location of Object.values(locationsById['npc'])) {
+                      if (checkedLocations.indexOf(location.locationId) === -1) {
+                        npcAllChecked = false;
+                        break;
+                      }
+                    }
+                    if (!npcAllChecked) {
                       npcLock = true;
-                      console.debug('Fetching NPC data');
                       getFromAddress(SAVEDATA_START + 0x410, 2, async (results) => {
                         const resultBuffer = await results.arrayBuffer();
-                        console.debug('NPC data');
-                        console.debug(resultBuffer);
                         const resultView = new DataView(resultBuffer);
                         const npcValue = resultView.getUint8(0) | (resultView.getUint8(1) << 8);
                         const newChecks = [];
                         for (const location of Object.values(locationsById['npc'])) {
                           if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
                           if ((npcValue & location.screenId) !== 0) {
-                            console.debug(`NPC sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
                         }
@@ -359,13 +364,17 @@ window.addEventListener('load', () => {
                     }
 
                     // If all misc locations have not been checked, pull misc data
-                    if (checkedLocations.every((location) => Object.keys(locationsById['misc']).includes(location))) {
+                    let miscAllChecked = true;
+                    for (const location of Object.values(locationsById['misc'])) {
+                      if (checkedLocations.indexOf(location.locationId) === -1) {
+                        miscAllChecked = false;
+                        break;
+                      }
+                    }
+                    if (!miscAllChecked) {
                       miscLock = true;
-                      console.debug('Fetching misc data');
                       getFromAddress(SAVEDATA_START + 0x3c6, 4, async (results) => {
                         const resultBuffer = await results.arrayBuffer();
-                        console.debug('Misc data');
-                        console.debug(resultBuffer);
                         const resultView = new DataView(resultBuffer);
                         const newChecks = [];
                         for (const location of Object.values(locationsById['misc'])) {
@@ -374,7 +383,6 @@ window.addEventListener('load', () => {
                           // console.assert(0x3c6 <= location.roomId <= 0x3c9);
                           if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
                           if ((resultView.getUint8(location.roomId - 0x3c6) & location.mask) !== 0) {
-                            console.debug(`Misc sending: ${JSON.stringify(location)}`);
                             newChecks.push(location.locationId);
                           }
                         }
@@ -389,7 +397,7 @@ window.addEventListener('load', () => {
                   });
                 });
               });
-            });
+            }, 1000);
             break;
 
           case 'ConnectionRefused':
