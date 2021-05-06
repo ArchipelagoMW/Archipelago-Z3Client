@@ -551,6 +551,7 @@ const sendLocationChecks = (locationIds) => {
  * @param locations An object of { locationId: locationName, ... }
  */
 const buildLocationData = (locations) => {
+  locationMap = locations;
   const locationIds = Object.keys(locations);
   const locationNames = Object.values(locations);
 

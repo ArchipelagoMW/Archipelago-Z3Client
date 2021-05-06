@@ -30,6 +30,9 @@ let players = [];
 // Location and item maps, populated from localStorage
 let itemsById = {};
 
+// Object matting locationId to locationName
+let locationMap = {};
+
 // Prebuilt maps of item/location data to prevent doing work more than once
 const locationsById = {
   underworld: {},
