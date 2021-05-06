@@ -116,7 +116,7 @@ window.addEventListener('load', () => {
             playerSlot = command.slot;
 
             // Create an array containing only shopIds
-            const shopIds = Object.values(SHOPS).map((shop) => shop.shopId);
+            const shopIds = Object.values(SHOPS).map((shop) => shop.locationId);
 
             snesWatcherInterval = setInterval(() => {
               // If there is currently a pending request to the SNES, do not send more requests.
@@ -233,18 +233,14 @@ window.addEventListener('load', () => {
                       // Request shop data from every shop in the game
                       const requestLength = (Object.keys(SHOPS).length * 3) + 5;
                       shopLock = true;
-                      console.debug('Fetching shop data');
                       getFromAddress(SHOP_ADDR, requestLength, async (results) => {
                         const shopBuffer = await results.arrayBuffer();
-                        console.debug('Shop data');
-                        console.debug(shopBuffer);
                         const shopView = new DataView(shopBuffer);
                         // Update the purchase status of every item in every shop. This is important because
                         // multiple shops can sell the same item, like a quiver when in retro mode
                         const newChecks = [];
-                        for (let index of requestLength) {
-                          if (shopView.getUint8(index) && checkedLocations.indexOf(SHOP_ID_START + index) > -1) {
-                            console.debug(`Shop data sent: ${SHOP_ID_START + index}`);
+                        for (let index = 0; index < requestLength; ++index) {
+                          if (shopView.getUint8(index) && checkedLocations.indexOf(SHOP_ID_START + index) === -1) {
                             newChecks.push(SHOP_ID_START + index)
                           }
                         }
@@ -253,6 +249,7 @@ window.addEventListener('load', () => {
                       });
                     }
 
+                    // TODO: Is this chunk of code necessary? All item locations are scanned below this block
                     // If the current room is unknown, do nothing. This happens if no check has been made yet
                     if (locationsByRoomId.hasOwnProperty(roomId)) {
                       // If there are new checks in this room, send them to the server
@@ -260,7 +257,6 @@ window.addEventListener('load', () => {
                       for (const location of locationsByRoomId['underworld'][roomId]) {
                         if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
                         if (((roomData << 4) & location.mask) !== 0) {
-                          console.debug(`Current room sending: ${JSON.stringify(location)}`);
                           newChecks.push(location.locationId);
                         }
                       }
