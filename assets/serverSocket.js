@@ -318,17 +318,13 @@ window.addEventListener('load', () => {
                     // fetch the remaining items to see if they have been previously obtained
                     if (overworldBegin < overworldEnd) {
                       owLock = true;
-                      console.debug('Fetching overworld data');
                       getFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin,
                         async (results) => {
                           const newChecks = [];
                           const resultBuffer = await results.arrayBuffer();
-                          console.debug('Overworld data');
-                          console.debug(resultBuffer);
                           const resultView = new DataView(resultBuffer);
                           for (const location of overworldMissing) {
                             if ((resultView.getUint8(location.screenId - overworldBegin) & 0x40) !== 0) {
-                              console.debug(`Overworld sending: ${JSON.stringify(location)}`);
                               newChecks.push(location.locationId);
                             }
                           }
