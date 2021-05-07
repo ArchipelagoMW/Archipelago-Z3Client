@@ -17,9 +17,11 @@
     "url": "https://github.com/LegendaryLinux/Archipelago-Z3Client/issues"
   },
   "dependencies": {
+    "bsdiff-node": "^2.3.1",
+    "electron": "^12.0.6",
     "path": "^0.12.7"
   },
   "devDependencies": {
-    "electron": "^12.0.2"
+    "electron-rebuild": "^2.3.5"
   }
 }

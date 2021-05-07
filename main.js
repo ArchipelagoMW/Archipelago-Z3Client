@@ -1,5 +1,7 @@
-const { app, BrowserWindow } = require('electron');
+const { app, BrowserWindow, dialog } = require('electron');
+const fs = require('fs');
 const path = require('path');
+const bsdiff = require('bsdiff-node');
 
 // TODO: Remove this line, as it is used for in-development notifications
 app.setAppUserModelId(process.execPath);
@@ -17,7 +19,40 @@ const createWindow = () => {
   win.loadFile('index.html');
 };
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
+  // Create the local config file if it does not exist
+  const configPath = path.join(process.env.HOMEPATH, 'ap-lttp.config.json');
+  if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(configPath,JSON.stringify({}));
+  }
+
+  // Load the config into memory
+  const config = JSON.parse(fs.readFileSync(configPath));
+
+  // Prompt for base rom file if not present in config or if missing from disk
+  if (!config.hasOwnProperty('baseRomPath') || !fs.existsSync(config.baseRomPath)) {
+    let baseRomPath = dialog.showOpenDialogSync(null, {
+      title: 'Select base ROM',
+      buttonLabel: 'Choose ROM',
+      message: 'Choose a base ROM to be used when patching.',
+    });
+    // Save base rom filepath back to config file
+    if (baseRomPath) {
+      config.baseRomPath = baseRomPath[0];
+      fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
+        baseRomPath: config.baseRomPath,
+      })));
+    }
+  }
+
+  // Create a new ROM from the patch file if the patch file is provided and the base rom is known
+  if (process.argv[2] && config.hasOwnProperty('baseRomPath')) {
+    if (fs.existsSync(process.argv[2]) && fs.existsSync(config.baseRomPath)) {
+      // await bsdiff.patch(config.baseRomPath, path.join(__dirname, 'output.sfc'), process.argv[2]);
+      // TODO: Automatically launch the ROM file
+    }
+  }
+
   createWindow();
 
   app.on('activate', () => {
