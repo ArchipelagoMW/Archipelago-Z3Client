@@ -1,27 +1,69 @@
 let cachedCommands = [];
+const maxCachedCommands = 5;
 let commandCursor = 0;
 
 window.addEventListener('load', () => {
   const commandInput = document.getElementById('console-input');
+  commandInput.addEventListener('keydown', (event) => {
+    // Only perform events on desired keys
+    const allowedKeys = ['ArrowUp', 'ArrowDown'];
+    if (allowedKeys.indexOf(event.key) === -1) { return; }
+
+    switch (event.key) {
+      case 'ArrowUp':
+        if (cachedCommands.length === 0 || commandCursor === maxCachedCommands) { return; }
+        if (commandCursor < maxCachedCommands && commandCursor < cachedCommands.length) { commandCursor++; }
+        commandInput.value = commandCursor ? cachedCommands[cachedCommands.length - commandCursor] : '';
+        return;
+
+      case 'ArrowDown':
+        if (cachedCommands.length === 0 || commandCursor === 0) { return; }
+        if (commandCursor > 0) { commandCursor--; }
+        commandInput.value = commandCursor ? cachedCommands[cachedCommands.length - commandCursor] : '';
+        return;
+
+      default:
+        return;
+    }
+  });
+
   commandInput.addEventListener('keyup', (event) => {
     // Ignore non-enter keyup events and empty commands
     if (event.key !== 'Enter' || !event.target.value) { return; }
 
+    // Ignore events related to the keydown listener
+    if (event.key === 'Up' || event.key === 'Down') { return; }
+
     // Detect slash commands and perform their actions
     if (event.target.value[0] === '/') {
-      switch (event.target.value) {
+      const commandParts = event.target.value.split(' ');
+      switch (commandParts[0]) {
         case '/sync':
-          commandInput.value = '';
-          return serverSync();
+          serverSync();
+          break;
+
+        case '/connect':
+          commandParts.shift();
+          const address = commandParts.join(' ');
+          document.getElementById('server-address').value = address;
+          connectToServer(address);
+          break;
 
         default:
           appendConsoleMessage('Unknown command.');
-          return;
+          break;
       }
+
+      // Cache the command, empty the command input, reset the command cursor
+      cacheCommand(event.target.value);
+      commandInput.value = '';
+      commandCursor = 0;
+      return;
     }
 
     // Send command to server
     sendMessageToServer(event.target.value);
+    cacheCommand(event.target.value);
 
     // Clear the input box
     commandInput.value = '';
@@ -85,8 +127,9 @@ const appendFormattedConsoleMessage = (messageParts) => {
 };
 
 const cacheCommand = (command) => {
+  appendConsoleMessage(`Command: ${command}`)
   // Limit stored command count to five
-  while (cachedCommands.length > 5) { cachedCommands.pop(); }
+  while (cachedCommands.length > maxCachedCommands) { cachedCommands.shift(); }
 
   // Store the command
   cachedCommands.push(command);

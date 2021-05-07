@@ -1,9 +1,9 @@
 // Client version data
 const CLIENT_VERSION = {
-  state: 'Alpha',
+  state: 'Beta',
   major: 0,
-  minor: 0,
-  patch: 1,
+  minor: 1,
+  patch: 0,
 };
 
 const SUPPORTED_ARCHIPELAGO_VERSION = {
