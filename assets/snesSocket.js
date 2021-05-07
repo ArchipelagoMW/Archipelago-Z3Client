@@ -96,8 +96,8 @@ const establishSnesHandlerConnection = (requestedDevice = null) => {
 
   snesSocket.onerror = () => {
     new Notification('SNES Handler Error', {
-      body: 'An error occurred with QUsb2SNES, and the connection has been closed. Please restart QUsb2SNES and ' +
-        'retry the connection.'
+      body: 'An error occurred with QUsb2SNES, and the connection has been closed. If QUsb2SNES is running,' +
+        ' try restarting it.'
     });
   }
 

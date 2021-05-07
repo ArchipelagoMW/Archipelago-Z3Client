@@ -1,6 +1,8 @@
 const { app, BrowserWindow, dialog } = require('electron');
 const fs = require('fs');
 const path = require('path');
+const lzma = require('lzma-native');
+const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
 
 // TODO: Remove this line, as it is used for in-development notifications
@@ -21,7 +23,7 @@ const createWindow = () => {
 
 app.whenReady().then(async () => {
   // Create the local config file if it does not exist
-  const configPath = path.join(process.env.HOMEPATH, 'ap-lttp.config.json');
+  const configPath = path.join(process.env.APPDATA, 'ap-lttp.config.json');
   if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath,JSON.stringify({}));
   }
@@ -48,7 +50,15 @@ app.whenReady().then(async () => {
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
   if (process.argv[2] && config.hasOwnProperty('baseRomPath')) {
     if (fs.existsSync(process.argv[2]) && fs.existsSync(config.baseRomPath)) {
-      // await bsdiff.patch(config.baseRomPath, path.join(__dirname, 'output.sfc'), process.argv[2]);
+      const patchFilePath = path.join(__dirname, 'patch.bsdiff');
+      const romFilePath = path.join(process.cwd(), 'output.sfc');
+      const apbpBuffer = await lzma.decompress(fs.readFileSync(process.argv[2]));
+      const apbp = yaml.load(apbpBuffer);
+      const apServer = apbp.meta.server | null;
+      // TODO: Connect user to AP server automatically
+      fs.writeFileSync(patchFilePath, apbp.patch);
+      await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
+      fs.rmSync(patchFilePath);
       // TODO: Automatically launch the ROM file
     }
   }
