@@ -1,5 +1,5 @@
 let cachedCommands = [];
-const maxCachedCommands = 5;
+const maxCachedCommands = 10;
 let commandCursor = 0;
 
 window.addEventListener('load', () => {
