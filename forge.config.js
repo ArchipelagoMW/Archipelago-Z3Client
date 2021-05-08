@@ -3,7 +3,7 @@ const path = require('path');
 module.exports = {
   packagerConfig: {
     name: "Archipelago-Z3Client",
-    icon: path.join(__dirname, "archipelago.png"),
+    icon: path.join(__dirname, "archipelago.ico"),
     prune: true,
   },
   makers: [
