@@ -94,6 +94,32 @@ app.whenReady().then(async () => {
     }
   }
 
+  // Prompt the user to select their QUsb2SNES path if not already known
+  if (!config.hasOwnProperty('qusbPath')) {
+    let qusbPath = dialog.showOpenDialogSync({
+      title: 'Locate QUsb2SNES',
+      buttonLabel: 'Select QUsb2SNES',
+      message: 'Locate the QUsb2SNES executable so this application can launch it automatically',
+    });
+    if (qusbPath) {
+      config.qusbPath = qusbPath[0];
+      fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
+        qusbPath: config.qusbPath,
+      })));
+    }
+  }
+
+  // Launch QUsb2SNES if we know where it is and it is not running
+  if (config.hasOwnProperty('qusbPath') && fs.existsSync(config.qusbPath)) {
+    const exec = require('child_process').exec;
+    exec('tasklist', (err, stdout, stderr) => {
+      if (stdout.search('QUsb2Snes') === -1) {
+        const execFile = require('child_process').execFile;
+        execFile(config.qusbPath);
+      }
+    });
+  }
+
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
   for (const arg of process.argv) {
     if (arg.substr(-5).toLowerCase() === '.apbp') {
@@ -107,7 +133,8 @@ app.whenReady().then(async () => {
         fs.writeFileSync(patchFilePath, apbp.patch);
         await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
         fs.rmSync(patchFilePath);
-        // TODO: Automatically launch the ROM file
+        const execFile = require('child_process').execFile;
+        execFile(romFilePath);
       }
       break;
     }
