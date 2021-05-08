@@ -5,6 +5,9 @@ const lzma = require('lzma-native');
 const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
 
+// Do not launch the client during the install process
+if (require('electron-squirrel-startup')) { return app.quit(); }
+
 // TODO: Remove this line, as it is used for in-development notifications
 app.setAppUserModelId(process.execPath);
 
@@ -56,11 +59,12 @@ app.whenReady().then(async () => {
   }
 
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
-  if (process.argv[1] && config.hasOwnProperty('baseRomPath')) {
-    if (fs.existsSync(process.argv[1]) && fs.existsSync(config.baseRomPath)) {
+  const patchFileArg = process.argv[1] === '.' ? process.argv[2] : null;
+  if (patchFileArg && config.hasOwnProperty('baseRomPath')) {
+    if (fs.existsSync(patchFileArg) && fs.existsSync(config.baseRomPath)) {
       const patchFilePath = path.join(__dirname, 'patch.bsdiff');
       const romFilePath = path.join(process.cwd(), 'output.sfc');
-      const apbpBuffer = await lzma.decompress(fs.readFileSync(process.argv[1]));
+      const apbpBuffer = await lzma.decompress(fs.readFileSync(patchFileArg));
       const apbp = yaml.load(apbpBuffer);
       sharedData.apServerAddress = apbp.meta.server | null;
       fs.writeFileSync(patchFilePath, apbp.patch);

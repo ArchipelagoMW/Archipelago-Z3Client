@@ -124,6 +124,7 @@ const appendFormattedConsoleMessage = (messageParts) => {
 
   // Append the message div to the monitor
   monitor.appendChild(messageDiv);
+  messageDiv.scrollIntoView(false);
 };
 
 const cacheCommand = (command) => {

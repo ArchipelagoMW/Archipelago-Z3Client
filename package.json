@@ -1,12 +1,12 @@
 {
   "name": "archipelago-z3client",
-  "version": "1.0.0",
+  "version": "0.9.0",
   "author": "Chris Wilson",
   "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
   "license": "MIT",
   "main": "main.js",
   "scripts": {
-    "start": "electron-forge start",
+    "start": "electron .",
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
@@ -35,30 +35,6 @@
     "electron-rebuild": "^2.3.5"
   },
   "config": {
-    "forge": {
-      "packagerConfig": {},
-      "makers": [
-        {
-          "name": "@electron-forge/maker-squirrel",
-          "config": {
-            "name": "archipelago_z3client"
-          }
-        },
-        {
-          "name": "@electron-forge/maker-zip",
-          "platforms": [
-            "darwin"
-          ]
-        },
-        {
-          "name": "@electron-forge/maker-deb",
-          "config": {}
-        },
-        {
-          "name": "@electron-forge/maker-rpm",
-          "config": {}
-        }
-      ]
-    }
+    "forge": "./forge.config.js"
   }
 }
