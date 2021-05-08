@@ -32,7 +32,7 @@ if (require('electron-squirrel-startup')) {
       hive: Registry.HKCU,
       key: '\\Software\\Classes\\archipelago.z3client.v1\\shell\\open\\command'
     });
-    commandKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, `${exePath} "%1"`, (error) => console.error(error));
+    commandKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, `"${exePath}" "%1"`, (error) => console.error(error));
 
     // Set .apbp files to launch with Z3Client
     const extensionKey = new Registry({
@@ -100,7 +100,7 @@ app.whenReady().then(async () => {
       if (config.hasOwnProperty('baseRomPath') && fs.existsSync(config.baseRomPath)) {
         if (!fs.existsSync(arg)) { break; }
         const patchFilePath = path.join(__dirname, 'patch.bsdiff');
-        const romFilePath = path.join(process.cwd(), 'output.sfc');
+        const romFilePath = path.join(path.dirname(arg), `${path.basename(arg).substr(0, arg.length - 5)}.sfc`);
         const apbpBuffer = await lzma.decompress(fs.readFileSync(arg));
         const apbp = yaml.load(apbpBuffer);
         sharedData.apServerAddress = apbp.meta.server | null;
