@@ -56,11 +56,11 @@ app.whenReady().then(async () => {
   }
 
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
-  if (process.argv[2] && config.hasOwnProperty('baseRomPath')) {
-    if (fs.existsSync(process.argv[2]) && fs.existsSync(config.baseRomPath)) {
+  if (process.argv[1] && config.hasOwnProperty('baseRomPath')) {
+    if (fs.existsSync(process.argv[1]) && fs.existsSync(config.baseRomPath)) {
       const patchFilePath = path.join(__dirname, 'patch.bsdiff');
       const romFilePath = path.join(process.cwd(), 'output.sfc');
-      const apbpBuffer = await lzma.decompress(fs.readFileSync(process.argv[2]));
+      const apbpBuffer = await lzma.decompress(fs.readFileSync(process.argv[1]));
       const apbp = yaml.load(apbpBuffer);
       sharedData.apServerAddress = apbp.meta.server | null;
       fs.writeFileSync(patchFilePath, apbp.patch);
