@@ -4,6 +4,7 @@ const path = require('path');
 const lzma = require('lzma-native');
 const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
+const childProcess = require('child_process');
 
 // Perform certain actions during the install process
 if (require('electron-squirrel-startup')) {
@@ -95,7 +96,7 @@ app.whenReady().then(async () => {
   }
 
   // Prompt the user to select their QUsb2SNES path if not already known
-  if (!config.hasOwnProperty('qusbPath')) {
+  if (!config.hasOwnProperty('qusbPath') || !fs.existsSync(config.qusbPath)) {
     let qusbPath = dialog.showOpenDialogSync({
       title: 'Locate QUsb2SNES',
       buttonLabel: 'Select QUsb2SNES',
@@ -114,8 +115,7 @@ app.whenReady().then(async () => {
     const exec = require('child_process').exec;
     exec('tasklist', (err, stdout, stderr) => {
       if (stdout.search('QUsb2Snes') === -1) {
-        const execFile = require('child_process').execFile;
-        execFile(config.qusbPath);
+        childProcess.spawn(config.qusbPath, { detached: true });
       }
     });
   }
@@ -133,8 +133,6 @@ app.whenReady().then(async () => {
         fs.writeFileSync(patchFilePath, apbp.patch);
         await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
         fs.rmSync(patchFilePath);
-        const execFile = require('child_process').execFile;
-        execFile(romFilePath);
       }
       break;
     }
