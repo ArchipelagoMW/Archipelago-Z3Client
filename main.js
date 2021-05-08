@@ -5,11 +5,47 @@ const lzma = require('lzma-native');
 const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
 
-// Do not launch the client during the install process
-if (require('electron-squirrel-startup')) { return app.quit(); }
+// Perform certain actions during the install process
+if (require('electron-squirrel-startup')) {
+  if (process.platform === 'win32') {
+    // Prepare to add registry entries for .apbp files
+    const Registry = require('winreg');
+    const exePath = path.join(process.env.LOCALAPPDATA, 'Archipelago-Z3Client', 'Archipelago-Z3Client.exe');
 
-// TODO: Remove this line, as it is used for in-development notifications
-app.setAppUserModelId(process.execPath);
+    // Set file type description for .apbp files
+    const descriptionKey = new Registry({
+      hive: Registry.HKCU,
+      key: '\\Software\\Classes\\archipelago.z3client.v1',
+    });
+    descriptionKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, 'Archipelago Binary Patch',
+      (error) => console.error(error));
+
+    // Set icon for .apbp files
+    const iconKey = new Registry({
+      hive: Registry.HKCU,
+      key: '\\Software\\Classes\\archipelago.z3client.v1\\DefaultIcon',
+    });
+    iconKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, `${exePath},0`, (error) => console.error(error));
+
+    // Set set default program for launching .apbp files (Z3Client)
+    const commandKey = new Registry({
+      hive: Registry.HKCU,
+      key: '\\Software\\Classes\\archipelago.z3client.v1\\shell\\open\\command'
+    });
+    commandKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, `${exePath} "%1"`, (error) => console.error(error));
+
+    // Set .apbp files to launch with Z3Client
+    const extensionKey = new Registry({
+      hive: Registry.HKCU,
+      key: '\\Software\\Classes\\.apbp',
+    });
+    extensionKey.set(Registry.DEFAULT_VALUE, Registry.REG_SZ, 'archipelago.z3client.v1',
+      (error) => console.error(error));
+  }
+
+  // Do not launch the client during the install process
+  return app.quit();
+}
 
 // Used to transfer server data from the main process to the renderer process
 const sharedData = {};
@@ -59,18 +95,21 @@ app.whenReady().then(async () => {
   }
 
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
-  const patchFileArg = process.argv[1] === '.' ? process.argv[2] : null;
-  if (patchFileArg && config.hasOwnProperty('baseRomPath')) {
-    if (fs.existsSync(patchFileArg) && fs.existsSync(config.baseRomPath)) {
-      const patchFilePath = path.join(__dirname, 'patch.bsdiff');
-      const romFilePath = path.join(process.cwd(), 'output.sfc');
-      const apbpBuffer = await lzma.decompress(fs.readFileSync(patchFileArg));
-      const apbp = yaml.load(apbpBuffer);
-      sharedData.apServerAddress = apbp.meta.server | null;
-      fs.writeFileSync(patchFilePath, apbp.patch);
-      await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
-      fs.rmSync(patchFilePath);
-      // TODO: Automatically launch the ROM file
+  for (const arg of process.argv) {
+    if (arg.substr(-5).toLowerCase() === '.apbp') {
+      if (config.hasOwnProperty('baseRomPath') && fs.existsSync(config.baseRomPath)) {
+        if (!fs.existsSync(arg)) { break; }
+        const patchFilePath = path.join(__dirname, 'patch.bsdiff');
+        const romFilePath = path.join(process.cwd(), 'output.sfc');
+        const apbpBuffer = await lzma.decompress(fs.readFileSync(arg));
+        const apbp = yaml.load(apbpBuffer);
+        sharedData.apServerAddress = apbp.meta.server | null;
+        fs.writeFileSync(patchFilePath, apbp.patch);
+        await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
+        fs.rmSync(patchFilePath);
+        // TODO: Automatically launch the ROM file
+      }
+      break;
     }
   }
 
