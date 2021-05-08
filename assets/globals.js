@@ -46,3 +46,6 @@ const locationsByRoomId = {
   npc: {},
   misc: {},
 };
+
+// Data shared between main and renderer processes
+let sharedData = {};

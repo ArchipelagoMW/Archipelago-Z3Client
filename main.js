@@ -1,4 +1,4 @@
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const lzma = require('lzma-native');
@@ -8,14 +8,22 @@ const bsdiff = require('bsdiff-node');
 // TODO: Remove this line, as it is used for in-development notifications
 app.setAppUserModelId(process.execPath);
 
+// Used to transfer server data from the main process to the renderer process
+const sharedData = {};
+
 const createWindow = () => {
   const win = new BrowserWindow({
     width: 1280,
-    minWidth: 800,
+    minWidth: 400,
     height: 720,
-    minHeight: 500,
+    minHeight: 100,
     autoHideMenuBar: true,
-    webPreferences: {}
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      enableRemoteModule: false,
+      preload: path.join(__dirname, 'preload.js'),
+    },
   });
 
   win.loadFile('index.html');
@@ -54,8 +62,7 @@ app.whenReady().then(async () => {
       const romFilePath = path.join(process.cwd(), 'output.sfc');
       const apbpBuffer = await lzma.decompress(fs.readFileSync(process.argv[2]));
       const apbp = yaml.load(apbpBuffer);
-      const apServer = apbp.meta.server | null;
-      // TODO: Connect user to AP server automatically
+      sharedData.apServerAddress = apbp.meta.server | null;
       fs.writeFileSync(patchFilePath, apbp.patch);
       await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
       fs.rmSync(patchFilePath);
@@ -76,4 +83,9 @@ app.whenReady().then(async () => {
       app.quit();
     }
   });
+});
+
+// Interprocess communication with the renderer process
+ipcMain.on('requestSharedData', (event, args) => {
+  event.sender.send('sharedData', sharedData);
 });

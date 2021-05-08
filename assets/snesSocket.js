@@ -29,6 +29,13 @@ window.addEventListener('load', () => {
 
   // If the user presses the refresh button, reset the SNES connection entirely
   document.getElementById('snes-device-refresh').addEventListener('click', establishSnesHandlerConnection);
+
+  window.ipc.receive('sharedData', (data) => {
+    sharedData = data;
+    if (sharedData.hasOwnProperty('apServerAddress')) {
+      connectToServer(sharedData.apServerAddress);
+    }
+  });
 });
 
 const establishSnesHandlerConnection = (requestedDevice = null) => {
@@ -130,6 +137,7 @@ const sendAttachRequest = (device) => {
     snesStatus.innerText = 'Connected';
     snesStatus.classList.remove('disconnected');
     snesStatus.classList.add('connected');
+    window.ipc.send('requestSharedData');
   });
 };
 
