@@ -77,7 +77,7 @@ app.whenReady().then(async () => {
   }
 
   // Load the config into memory
-  const config = JSON.parse(fs.readFileSync(configPath));
+  const config = JSON.parse(fs.readFileSync(configPath).toString());
 
   // Prompt for base rom file if not present in config or if missing from disk
   if (!config.hasOwnProperty('baseRomPath') || !fs.existsSync(config.baseRomPath)) {
@@ -126,13 +126,23 @@ app.whenReady().then(async () => {
       if (config.hasOwnProperty('baseRomPath') && fs.existsSync(config.baseRomPath)) {
         if (!fs.existsSync(arg)) { break; }
         const patchFilePath = path.join(__dirname, 'patch.bsdiff');
-        const romFilePath = path.join(path.dirname(arg), `${path.basename(arg).substr(0, arg.length - 5)}.sfc`);
+        const romFilePath = path.join(path.dirname(arg),
+          `${path.basename(arg).substr(0, path.basename(arg).length - 5)}.sfc`);
         const apbpBuffer = await lzma.decompress(fs.readFileSync(arg));
         const apbp = yaml.load(apbpBuffer);
         sharedData.apServerAddress = apbp.meta.server | null;
         fs.writeFileSync(patchFilePath, apbp.patch);
         await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
         fs.rmSync(patchFilePath);
+        // If a custom launcher is specified, attempt to launch the ROM file using the specified loader
+        if (config.hasOwnProperty('launcherPath') && fs.existsSync(config.launcherPath)) {
+          childProcess.spawn(config.launcherPath, [romFilePath], { detached: true });
+          break;
+        }
+        // If no custom launcher is specified, launch the rom with explorer on Windows
+        if (process.platform === 'win32') {
+          childProcess.spawn('explorer', [romFilePath], { detached: true });
+        }
       }
       break;
     }
@@ -156,4 +166,19 @@ app.whenReady().then(async () => {
 // Interprocess communication with the renderer process
 ipcMain.on('requestSharedData', (event, args) => {
   event.sender.send('sharedData', sharedData);
+});
+ipcMain.on('setLauncher', (event, args) => {
+  // Allow the user to specify a program to launch the ROM
+  const configPath = path.join(process.env.APPDATA, 'ap-lttp.config.json');
+  const config = JSON.parse(fs.readFileSync(configPath).toString());
+  const launcherPath = dialog.showOpenDialogSync({
+    title: 'Locate ROM Launcher',
+    buttonLabel: 'Select Launcher',
+    message: 'Choose an executable to be used when launching the ROM',
+  });
+  if (launcherPath) {
+    fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
+      launcherPath: launcherPath[0],
+    })));
+  }
 });

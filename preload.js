@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('ipc', {
   send: (channel, data) => {
-    const validChannels = ['requestSharedData'];
+    const validChannels = ['requestSharedData', 'setLauncher'];
     if (validChannels.includes(channel)) {
       ipcRenderer.send(channel, data);
     }

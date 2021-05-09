@@ -49,6 +49,11 @@ window.addEventListener('load', () => {
           connectToServer(address);
           break;
 
+        case '/launcher':
+          appendConsoleMessage('Opening dialog for launcher choice...');
+          window.ipc.send('setLauncher');
+          break;
+
         default:
           appendConsoleMessage('Unknown command.');
           break;
