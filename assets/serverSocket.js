@@ -411,7 +411,11 @@ const connectToServer = (address) => {
 
         case 'ReceivedItems':
           // Save received items in the array of items to be sent to the SNES
-          command.items.forEach((item) => itemsReceived.push(item));
+          command.items.forEach((item) => {
+            if (checkedLocations.indexOf(item.location) === -1) {
+              itemsReceived.push(item);
+            }
+          });
           break;
 
         case 'LocationInfo':
