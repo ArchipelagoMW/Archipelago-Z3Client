@@ -1,5 +1,6 @@
 let deviceList = [];
 let connectedDeviceType = null;
+let fxPakMode = false;
 
 // Request queueing system for QUsb2SNES
 let requestQueue = [];
@@ -132,6 +133,8 @@ const sendAttachRequest = (device) => {
 
   sendRequest({ Opcode: 'Attach', Space: 'SNES', Operands: [device] });
   sendRequest({ Opcode: 'Info', Space: 'SNES' }, (results) => {
+    // Enable FXPak mode if the device name contains sd2snes, fxpak, or COM
+    fxPakMode = (device.search(/sd2snes|fxpak/i) > -1) || (device.search(/COM/) > -1);
     connectedDeviceType = results[1];
     const snesStatus = document.getElementById('snes-device-status');
     snesStatus.innerText = 'Connected';
@@ -169,6 +172,12 @@ const getFromAddress = (hexOffset, byteCountInHex, callback) => {
  * @param binaryData Data to be written to the ROM
  */
 const putToAddress = (hexOffset, binaryData) => {
+  // FXPak needs special handling
+  if (fxPakMode) {
+    // LttPClient.py line 645
+    return;
+  }
+
   sendMultipleRequests([
     {
       data: { Opcode: 'PutAddress', Space: 'SNES', Operands: [hexOffset.toString(16), binaryData.size.toString(16)] },
