@@ -22,4 +22,24 @@ window.addEventListener('load', () => {
       document.body.classList.add('terminal-mode');
     }
   });
+
+  // Allow the user to press a button to pause receiving items (a.k.a. Malmo Mode)
+  document.getElementById('receive-items').addEventListener('click', (evt) => {
+    receiveItems ? disableReceivingItems() : enableReceivingItems();
+  });
 });
+
+const disableReceivingItems = () => {
+  const receiveItemsButton = document.getElementById('receive-items');
+  receiveItems = false;
+  receiveItemsButton.innerText = 'Enable';
+  appendConsoleMessage('You are no longer receiving items from other players. Items found in your ' +
+    ' world will still be sent.');
+};
+
+const enableReceivingItems = () => {
+  const receiveItemsButton = document.getElementById('receive-items');
+  receiveItems = true;
+  receiveItemsButton.innerText = 'Disable';
+  appendConsoleMessage('You are now receiving items from other players.');
+};

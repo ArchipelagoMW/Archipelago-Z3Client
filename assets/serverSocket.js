@@ -178,7 +178,7 @@ const connectToServer = (address) => {
 
                   // If there are still items needing to be sent, and Link is not in the middle of
                   // receiving something, send the item to the SNES
-                  if ((romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
+                  if (receiveItems && (romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
                     // Increment the counter of items sent to the ROM
                     const indexBuffer = new ArrayBuffer(2);
                     const indexView = new DataView(indexBuffer);

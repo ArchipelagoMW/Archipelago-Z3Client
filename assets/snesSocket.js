@@ -174,7 +174,7 @@ const getFromAddress = (hexOffset, byteCountInHex, callback) => {
 const putToAddress = (hexOffset, binaryData) => {
   // FXPak needs special handling
   if (fxPakMode) {
-    // LttPClient.py line 645
+    // Coming Soon™
     return;
   }
 

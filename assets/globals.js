@@ -49,3 +49,6 @@ const locationsByRoomId = {
 
 // Data shared between main and renderer processes
 let sharedData = {};
+
+// The user has the option to pause receiving items
+let receiveItems = true;
