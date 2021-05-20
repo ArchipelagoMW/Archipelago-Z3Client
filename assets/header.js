@@ -4,7 +4,10 @@ window.addEventListener('load', () => {
   document.getElementById('client-version').innerText =
     `${CLIENT_VERSION.state} ${CLIENT_VERSION.major}.${CLIENT_VERSION.minor}.${CLIENT_VERSION.patch}`;
 
-  // TODO: Update text size
+  // Allow the user to change the size of the font in the console window
+  document.getElementById('small-text').addEventListener('click', useSmallText);
+  document.getElementById('medium-text').addEventListener('click', useMediumText);
+  document.getElementById('large-text').addEventListener('click', useLargeText);
 
   // Include a toggle for terminal mode
   document.body.addEventListener('keydown', (evt) => {
@@ -43,3 +46,8 @@ const enableReceivingItems = () => {
   receiveItemsButton.innerText = 'Disable';
   appendConsoleMessage('You are now receiving items from other players.');
 };
+
+// Allow the user to change the size of text in the console window
+const useSmallText = () => document.getElementById('console-output-wrapper').style.fontSize = "12px";
+const useMediumText = () => document.getElementById('console-output-wrapper').style.fontSize = "16px";
+const useLargeText = () => document.getElementById('console-output-wrapper').style.fontSize = "20px";

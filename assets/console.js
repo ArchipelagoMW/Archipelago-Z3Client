@@ -54,6 +54,23 @@ window.addEventListener('load', () => {
           window.ipc.send('setLauncher');
           break;
 
+        case '/smalltext':
+          useSmallText();
+          break;
+
+        case '/mediumtext':
+          useMediumText();
+          break;
+
+        case '/largetext':
+          useLargeText();
+          break;
+
+        case '/pause':
+        case '/malmo': // For the memes
+          receiveItems ? disableReceivingItems() : enableReceivingItems();
+          break;
+
         default:
           appendConsoleMessage('Unknown command.');
           break;
