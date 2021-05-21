@@ -172,9 +172,63 @@ const getFromAddress = (hexOffset, byteCountInHex, callback) => {
  * @param binaryData Data to be written to the ROM
  */
 const putToAddress = (hexOffset, binaryData) => {
-  // FXPak needs special handling
+  // FXPak needs special handling. This loads memory into the SNES Core
   if (fxPakMode) {
-    // Coming Soon™
+    const writeBuffer = new ArrayBuffer(20 + (binaryData.size * 6));
+    const writeView = new DataView(writeBuffer);
+    let currentOffset = 0;
+
+    // Store the SNES cpu state
+    const storeArray = [0x00, 0xE2, 0x20, 0x48, 0xEB, 0x48]
+    for (const data of storeArray) {
+      writeView.setUint8(currentOffset, data);
+      currentOffset++;
+    }
+
+    for (let i = 0; i < binaryData.length; i++) {
+      const memoryAddress = hexOffset + 0x7E0000 - WRAM_START;
+      writeView.setUint8(currentOffset, 0xA9); // LDA (write the following byte into the accumulator)
+      currentOffset++;
+
+      writeView.setUint8(currentOffset, binaryData[i]) // Byte to be written
+      currentOffset++;
+
+      writeView.setUint8(currentOffset, 0x8F); // STA.l (store accumulator to memory, absolute long indexed)
+      currentOffset++;
+
+      writeView.setUint8(currentOffset, memoryAddress & 0xFF); // Data written to accumulator
+      currentOffset++;
+
+      writeView.setUint8(currentOffset, (memoryAddress >> 8) & 0xFF); // Data written to accumulator
+      currentOffset++;
+
+      writeView.setUint8(currentOffset, (memoryAddress >> 16) & 0xFF); // Data written to accumulator
+      currentOffset++;
+    }
+
+    // Restore the SNES cpu state
+    const restoreArray = [0xA9, 0x00, 0x8F, 0x00, 0x2C, 0x00, 0x68, 0xEB, 0x68, 0x28, 0x6C, 0xEA, 0xFF, 0x08];
+    for (const data of restoreArray) {
+      writeView.setUint8(currentOffset, data);
+      currentOffset++;
+    }
+
+    sendMultipleRequests([
+      {
+        data: {
+          Opcode: 'PutAddress',
+          Space: 'CMD',
+          Operands: ['2C00', new Blob(writeBuffer).size.toString(16), '2C00', '1'],
+        },
+        callback: null,
+        dataType: 'json',
+      },
+      {
+        data: new Blob(writeBuffer),
+        callback: null,
+        dataType: 'binary',
+      }
+    ]);
     return;
   }
 
