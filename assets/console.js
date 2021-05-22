@@ -54,16 +54,11 @@ window.addEventListener('load', () => {
           window.ipc.send('setLauncher');
           break;
 
-        case '/smalltext':
-          useSmallText();
-          break;
-
-        case '/mediumtext':
-          useMediumText();
-          break;
-
-        case '/largetext':
-          useLargeText();
+        case '/fontsize':
+          if (commandParts.length < 2) {
+            appendConsoleMessage('You must specify a font size like: /fontsize 16');
+          }
+          setFontSize(parseInt(commandParts[1]));
           break;
 
         case '/pause':
