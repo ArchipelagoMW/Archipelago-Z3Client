@@ -171,26 +171,27 @@ const getFromAddress = (hexOffset, byteCountInHex, callback) => {
  * @param hexOffset Location to begin reading from SNES memory
  * @param binaryData Data to be written to the ROM
  */
-const putToAddress = (hexOffset, binaryData) => {
+const putToAddress = async (hexOffset, binaryData) => {
   // FXPak needs special handling. This loads memory into the SNES Core
   if (fxPakMode) {
     const writeBuffer = new ArrayBuffer(20 + (binaryData.size * 6));
     const writeView = new DataView(writeBuffer);
+    const binaryBuffer = await binaryData.arrayBuffer();
+    const binaryView = new DataView(binaryBuffer);
     let currentOffset = 0;
 
     // Store the SNES cpu state
-    const storeArray = [0x00, 0xE2, 0x20, 0x48, 0xEB, 0x48]
-    for (const data of storeArray) {
+    [0x00, 0xE2, 0x20, 0x48, 0xEB, 0x48].forEach((data) => {
       writeView.setUint8(currentOffset, data);
       currentOffset++;
-    }
+    });
 
-    for (let i = 0; i < binaryData.length; i++) {
-      const memoryAddress = hexOffset + 0x7E0000 - WRAM_START;
+    for (let i = 0; i < binaryData.size; i++) {
+      const memoryAddress = hexOffset + 0x7E0000 - WRAM_START + i;
       writeView.setUint8(currentOffset, 0xA9); // LDA (write the following byte into the accumulator)
       currentOffset++;
 
-      writeView.setUint8(currentOffset, binaryData[i]) // Byte to be written
+      writeView.setUint8(currentOffset, binaryView.getUint8(i)) // Byte to be written
       currentOffset++;
 
       writeView.setUint8(currentOffset, 0x8F); // STA.l (store accumulator to memory, absolute long indexed)
@@ -207,24 +208,23 @@ const putToAddress = (hexOffset, binaryData) => {
     }
 
     // Restore the SNES cpu state
-    const restoreArray = [0xA9, 0x00, 0x8F, 0x00, 0x2C, 0x00, 0x68, 0xEB, 0x68, 0x28, 0x6C, 0xEA, 0xFF, 0x08];
-    for (const data of restoreArray) {
+    [0xA9, 0x00, 0x8F, 0x00, 0x2C, 0x00, 0x68, 0xEB, 0x68, 0x28, 0x6C, 0xEA, 0xFF, 0x08].forEach((data) => {
       writeView.setUint8(currentOffset, data);
       currentOffset++;
-    }
+    });
 
     sendMultipleRequests([
       {
         data: {
           Opcode: 'PutAddress',
           Space: 'CMD',
-          Operands: ['2C00', new Blob(writeBuffer).size.toString(16), '2C00', '1'],
+          Operands: ['2C00', ((new Blob([writeBuffer])).size - 1).toString(16), '2C00', '1'],
         },
         callback: null,
         dataType: 'json',
       },
       {
-        data: new Blob(writeBuffer),
+        data: new Blob([writeBuffer]),
         callback: null,
         dataType: 'binary',
       }

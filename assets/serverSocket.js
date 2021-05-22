@@ -184,20 +184,20 @@ const connectToServer = (address) => {
                     const indexView = new DataView(indexBuffer);
                     indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
                     indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
-                    putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
+                    await putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
 
                     // Send the item to the SNES
                     const itemBuffer = new ArrayBuffer(1);
                     const itemView = new DataView(itemBuffer);
                     itemView.setUint8(0, itemsReceived[romItemsReceived].item);
-                    putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemBuffer]));
+                    await putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemBuffer]));
 
                     // Tell the SNES the id of the player who sent the item
                     const senderBuffer = new ArrayBuffer(1);
                     const senderView = new DataView(senderBuffer);
                     senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
                       0 : itemsReceived[romItemsReceived].player)
-                    putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
+                    await putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
                   }
 
                   // If the player's current location has a scout item (an item laying on the ground), we need to
@@ -218,17 +218,17 @@ const connectToServer = (address) => {
                       const locationDataBuffer = new ArrayBuffer(1);
                       const locationDataView = new DataView(locationDataBuffer);
                       locationDataView.setUint8(0, scoutLocation);
-                      putToAddress(SCOUTREPLY_LOCATION_ADDR, new Blob([locationDataBuffer]));
+                      await putToAddress(SCOUTREPLY_LOCATION_ADDR, new Blob([locationDataBuffer]));
 
                       const itemDataBuffer = new ArrayBuffer(1);
                       const itemDataView = new DataView(itemDataBuffer);
                       itemDataView.setUint8(0, scoutedLocations[scoutLocation].item);
-                      putToAddress(SCOUTREPLY_ITEM_ADDR, new Blob([itemDataBuffer]));
+                      await putToAddress(SCOUTREPLY_ITEM_ADDR, new Blob([itemDataBuffer]));
 
                       const playerDataBuffer = new ArrayBuffer(1);
                       const playerDataView = new DataView(playerDataBuffer);
                       playerDataView.setUint8(0, scoutedLocations[scoutLocation].player);
-                      putToAddress(SCOUTREPLY_PLAYER_ADDR, new Blob([playerDataBuffer]));
+                      await putToAddress(SCOUTREPLY_PLAYER_ADDR, new Blob([playerDataBuffer]));
                     }
                   }
 

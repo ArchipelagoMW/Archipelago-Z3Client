@@ -2,3 +2,4 @@
 node_modules
 *.sfc
 out/
+config.ini
