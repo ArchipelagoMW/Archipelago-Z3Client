@@ -1,9 +1,12 @@
 // noinspection JSBitwiseOperatorUsage
 
 let itemsReceived = [];
+const maxReconnectAttempts = 10;
+let reconnectAttempts = 0;
 
 // Control variable for the SNES watcher. Contains an interval (see MDN: setInterval)
 let snesWatcherInterval = null;
+let reconnectInterval = null;
 
 // Additional loop controls for the SNES watcher
 let snesWatcherLock = false;
@@ -103,6 +106,13 @@ const connectToServer = (address) => {
           break;
 
         case 'Connected':
+          // Reset reconnection info if necessary
+          reconnectAttempts = 0;
+          if (reconnectInterval) {
+            clearInterval(reconnectInterval);
+            reconnectInterval = null;
+          }
+
           // Store the reported location check data from the server. They are arrays of locationIds
           checkedLocations = command.checked_locations;
           missingLocations = command.missing_locations;
@@ -503,12 +513,20 @@ const connectToServer = (address) => {
       snesWatcherInterval = null;
     }
 
-    if (!event.target.wasClean) {
-      // A non-clean close event means the socket closed unexpectedly
-      new Notification('Archipelago Server Connection Lost', {
-        body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
-      });
-      console.log(event);
+    // If the SNES connection is still working, attempt to reconnect to the AP server
+    if (snesSocket && snesSocket.readyState === WebSocket.OPEN) {
+      // If the user cleared the server address, do nothing
+      const serverAddress = document.getElementById('server-address').value;
+      if (!serverAddress) { return; }
+
+      // Attempt to reconnect once every ten seconds, up to the maximum number of retry attempts
+      reconnectInterval = setInterval(() => {
+        if (++reconnectAttempts > maxReconnectAttempts) {
+          return clearInterval(reconnectInterval);
+        }
+        appendConsoleMessage(`Trying to reconnect to AP server (${reconnectAttempts} of ${maxReconnectAttempts})...`);
+        connectToServer(serverAddress);
+      }, 10000);
     }
   };
 
