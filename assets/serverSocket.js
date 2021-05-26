@@ -205,6 +205,7 @@ const connectToServer = (address) => {
                     // Tell the SNES the id of the player who sent the item
                     const senderBuffer = new ArrayBuffer(1);
                     const senderView = new DataView(senderBuffer);
+                    // TODO: This sends the wrong player ID. Probably an off-by-one error.
                     senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
                       0 : itemsReceived[romItemsReceived].player)
                     await putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));

@@ -310,3 +310,7 @@ const destroyRequestQueue = () => {
   queueLocked = false;
   currentRequest = null;
 };
+
+const _sendRequest = async (data, dataType='json', expectResponse=true) => new Promise((resolve, reject) => {
+  // TODO: Re-Write the entire request system to be Promise-based
+});
