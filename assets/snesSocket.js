@@ -31,7 +31,7 @@ window.addEventListener('load', async () => {
   window.ipc.receive('sharedData', async (data) => {
     sharedData = data;
     if (sharedData.hasOwnProperty('apServerAddress')) {
-      await connectToServer(sharedData.apServerAddress);
+      connectToServer(sharedData.apServerAddress);
     }
   });
 });
@@ -45,15 +45,14 @@ const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((
   // Attempt to connect to the SNES handler
   snesSocket = new WebSocket(`${SNES_HANDLER_ADDRESS}:${SNES_HANDLER_PORT}`);
   snesSocket.onopen = () => {
-    // TODO: This function needs to be updated to conform to the new Promise based format
-    // TODO: serverSocket.js also needs to be updated with new logic for this
-    const requestData = {
-      Opcode: 'DeviceList',
-      Space: 'SNES',
-    };
-    sendRequest(requestData, (response) => {
+    snesSocket.send(JSON.stringify({ Opcode: 'DeviceList', Space: 'SNES' }));
+
+    const requestInterval = setInterval(() => {
+      if (snesResponse === null) { return; }
+
       // This is a list of available devices
-      deviceList = response;
+      deviceList = snesResponse;
+      snesResponse = null;
 
       // Clear the current device list
       const snesSelect = document.getElementById('snes-device');
@@ -79,13 +78,15 @@ const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((
 
       // If the user requested a specific device, attach to it
       if (requestedDevice) {
-        return sendAttachRequest(requestedDevice);
+        sendAttachRequest(requestedDevice).then(() => resolve);
+        return clearInterval(requestInterval);
       }
 
       // If only one device is available, connect to it
       if (deviceList.length === 1) {
-        sendAttachRequest(deviceList[0]);
         snesSelect.value = deviceList[0];
+        sendAttachRequest(deviceList[0]).then(() => resolve);
+        return clearInterval(requestInterval);
       }
     });
   };
@@ -120,8 +121,7 @@ const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((
 
 const sendAttachRequest = (device) => new Promise(async (resolve, reject) => {
   if (snesSocket === null || snesSocket.readyState !== WebSocket.OPEN) {
-    await establishSnesHandlerConnection(device);
-    return resolve();
+    return resolve(await establishSnesHandlerConnection(device));
   }
 
   // Send the attach request
@@ -144,6 +144,7 @@ const sendAttachRequest = (device) => new Promise(async (resolve, reject) => {
     snesStatus.classList.remove('disconnected');
     snesStatus.classList.add('connected');
     resolve(window.ipc.send('requestSharedData'));
+    clearInterval(requestInterval);
   })
 });
 
