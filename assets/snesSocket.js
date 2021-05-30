@@ -1,17 +1,17 @@
 // Control variables for SNES requests
-const SNES_TIMEOUT = 30000;
+const SNES_TIMEOUT = 5000;
 let snesResponse = null;
 
 let deviceList = [];
 let connectedDeviceType = null;
 let fxPakMode = false;
 
-window.addEventListener('load', async () => {
+window.addEventListener('load', () => {
   // Attempt to connect to QUsb2Snes
-  await establishSnesHandlerConnection();
+  establishSnesHandlerConnection();
 
   // Handle SNES device change
-  document.getElementById('snes-device').addEventListener('change', async(event) => {
+  document.getElementById('snes-device').addEventListener('change', async (event) => {
     const snesStatus = document.getElementById('snes-device-status');
     snesStatus.innerText = 'Not Connected';
     snesStatus.classList.remove('connected');
@@ -22,13 +22,15 @@ window.addEventListener('load', async () => {
       return (snesSocket.readyState === WebSocket.OPEN) ? snesSocket.close() : null;
     }
 
-    await sendAttachRequest(event.target.value);
+    await attachToDevice(event.target.value);
   });
 
   // If the user presses the refresh button, reset the SNES connection entirely
-  document.getElementById('snes-device-refresh').addEventListener('click', establishSnesHandlerConnection);
+  document.getElementById('snes-device-refresh').addEventListener('click', () => {
+    establishSnesHandlerConnection();
+  });
 
-  window.ipc.receive('sharedData', async (data) => {
+  window.ipc.receive('sharedData', (data) => {
     sharedData = data;
     if (sharedData.hasOwnProperty('apServerAddress')) {
       connectToServer(sharedData.apServerAddress);
@@ -36,19 +38,25 @@ window.addEventListener('load', async () => {
   });
 });
 
-const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((resolve, reject) => {
+const establishSnesHandlerConnection = (requestedDevice = null) => {
   // Close the connection to the SNES handler if it is not already closed
   if (snesSocket && snesSocket.readyState === WebSocket.OPEN) {
     snesSocket.close();
   }
 
   // Attempt to connect to the SNES handler
+  appendConsoleMessage('DEBUG: Creating SNES handler');
   snesSocket = new WebSocket(`${SNES_HANDLER_ADDRESS}:${SNES_HANDLER_PORT}`);
-  snesSocket.onopen = () => {
+  snesSocket.onopen = async () => {
+    appendConsoleMessage('DEBUG: Requesting device list.');
     snesSocket.send(JSON.stringify({ Opcode: 'DeviceList', Space: 'SNES' }));
 
-    const requestInterval = setInterval(() => {
-      if (snesResponse === null) { return; }
+    const timeout = new Date().getTime() + SNES_TIMEOUT;
+    appendConsoleMessage(`DEBUG: Timeout at ${timeout}, currently ${new Date().getTime()}`);
+    while (new Date().getTime() < timeout) {
+      appendConsoleMessage(`DEBUG: snesResponse: ${snesResponse}`);
+      if (snesResponse === null) { continue; }
+      appendConsoleMessage(`DEBUG: Device list retrieved: ${snesResponse.toString()}`);
 
       // This is a list of available devices
       deviceList = snesResponse;
@@ -78,17 +86,17 @@ const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((
 
       // If the user requested a specific device, attach to it
       if (requestedDevice) {
-        sendAttachRequest(requestedDevice).then(() => resolve);
-        return clearInterval(requestInterval);
+        return await attachToDevice(requestedDevice);
       }
 
       // If only one device is available, connect to it
       if (deviceList.length === 1) {
         snesSelect.value = deviceList[0];
-        sendAttachRequest(deviceList[0]).then(() => resolve);
-        return clearInterval(requestInterval);
+        return await attachToDevice(deviceList[0]);
       }
-    });
+
+      return;
+    }
   };
 
   snesSocket.onmessage = (event) => {
@@ -117,35 +125,31 @@ const establishSnesHandlerConnection = (requestedDevice = null) => new Promise((
       return console.log(event);
     }
   };
-});
+};
 
-const sendAttachRequest = (device) => new Promise(async (resolve, reject) => {
+const attachToDevice = (device) => new Promise(async (resolve, reject) => {
   if (snesSocket === null || snesSocket.readyState !== WebSocket.OPEN) {
-    return resolve(await establishSnesHandlerConnection(device));
+    return establishSnesHandlerConnection(device);
   }
 
   // Send the attach request
   snesSocket.send(JSON.stringify({ Opcode: 'Attach', Space: 'SNES', Operands: [device] }));
-  await wait(60); // Wait for the SNES
-
   snesSocket.send(JSON.stringify({ Opcode: 'Info', Space: 'SNES' }));
-  const requestInterval = setInterval(() => {
-    // Wait for the SNES to respond
-    if (snesResponse === null) { return; }
 
-    const results = snesResponse;
-    snesResponse = null;
+  const timeout = new Date().getTime() + SNES_TIMEOUT;
+  while (new Date().getTime() < timeout) {
+    if (snesResponse === null) { continue; }
 
     // Enable FXPak mode if the device name contains sd2snes, fxpak, or COM
     fxPakMode = (device.search(/sd2snes|fxpak/i) > -1) || (device.search(/COM/) > -1);
-    connectedDeviceType = results[1];
+    connectedDeviceType = snesResponse[1];
     const snesStatus = document.getElementById('snes-device-status');
     snesStatus.innerText = 'Connected';
     snesStatus.classList.remove('disconnected');
     snesStatus.classList.add('connected');
-    resolve(window.ipc.send('requestSharedData'));
-    clearInterval(requestInterval);
-  })
+    snesResponse = null;
+    return resolve(window.ipc.send('requestSharedData'));
+  }
 });
 
 /**
@@ -165,14 +169,15 @@ const getFromAddress = (hexOffset, byteCountInHex) => new Promise((resolve, reje
     Space: 'SNES',
     Operands: [hexOffset.toString(16), byteCountInHex.toString(16)],
   }));
-  const requestInterval = setInterval(() => {
-    if (snesResponse !== null) {
-      const temp = snesResponse;
-      snesResponse = null;
-      resolve(temp);
-      clearInterval(requestInterval);
-    }
-  });
+
+  const timeout = new Date().getTime() + SNES_TIMEOUT;
+  while (new Date().getTime() < timeout) {
+    if (snesResponse === null) { continue; }
+
+    resolve(snesResponse);
+    snesResponse = null;
+    return;
+  }
 });
 
 /**
@@ -236,9 +241,6 @@ const putToAddress = (hexOffset, binaryData) => new Promise(async (resolve, reje
       Operands: ['2C00', ((new Blob([writeBuffer])).size - 1).toString(16), '2C00', '1'],
     }));
 
-    // Wait for the SNES to be ready to receive data
-    await wait(60);
-
     // Send the binary data to the SNES
     snesSocket.send(new Blob([writeBuffer]));
 
@@ -255,9 +257,6 @@ const putToAddress = (hexOffset, binaryData) => new Promise(async (resolve, reje
     callback: null,
     dataType: 'json',
   }));
-
-  // Wait for the SNES to be ready to receive data
-  await wait(60);
 
   // Send the binary data to the SNES
   snesSocket.send(binaryData);
