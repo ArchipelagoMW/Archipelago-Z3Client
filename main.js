@@ -5,6 +5,7 @@ const lzma = require('lzma-native');
 const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
 const childProcess = require('child_process');
+const SNI = require('./SNI');
 
 // Perform certain actions during the install process
 if (require('electron-squirrel-startup')) {
@@ -95,30 +96,13 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Prompt the user to select their QUsb2SNES path if not already known
-  if (!config.hasOwnProperty('qusbPath') || !fs.existsSync(config.qusbPath)) {
-    let qusbPath = dialog.showOpenDialogSync({
-      title: 'Locate QUsb2SNES',
-      buttonLabel: 'Select QUsb2SNES',
-      message: 'Locate the QUsb2SNES executable so this application can launch it automatically',
-    });
-    if (qusbPath) {
-      config.qusbPath = qusbPath[0];
-      fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
-        qusbPath: config.qusbPath,
-      })));
+  // Launch SNI if it is not running
+  const exec = require('child_process').exec;
+  exec('tasklist', (err, stdout, stderr) => {
+    if (stdout.search('sni.exe') === -1) {
+      childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
     }
-  }
-
-  // Launch QUsb2SNES if we know where it is and it is not running
-  if (config.hasOwnProperty('qusbPath') && fs.existsSync(config.qusbPath)) {
-    const exec = require('child_process').exec;
-    exec('tasklist', (err, stdout, stderr) => {
-      if (stdout.search('QUsb2Snes') === -1) {
-        childProcess.spawn(config.qusbPath, { detached: true });
-      }
-    });
-  }
+  });
 
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
   for (const arg of process.argv) {

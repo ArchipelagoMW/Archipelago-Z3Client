@@ -2,8 +2,8 @@
 const CLIENT_VERSION = {
   state: 'Beta',
   major: 0,
-  minor: 9,
-  patch: 4,
+  minor: 10,
+  patch: 0,
 };
 
 const SUPPORTED_ARCHIPELAGO_VERSION = {
@@ -12,11 +12,6 @@ const SUPPORTED_ARCHIPELAGO_VERSION = {
   build: 1,
   class: 'Version',
 };
-
-// SNES Device
-const SNES_HANDLER_ADDRESS = 'ws://127.0.0.1';
-const SNES_HANDLER_PORT = 8080;
-let snesSocket = null;
 
 // Archipelago server
 const DEFAULT_SERVER_PORT = 38281;
