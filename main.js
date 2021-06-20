@@ -147,6 +147,15 @@ app.whenReady().then(async () => {
   });
 });
 
+const sni = new SNI();
+sni.listDevices().then(async () => {
+  sni.setDevice(sni.devicesList[0]);
+  const romName = await sni.readFromAddress(0xE00000 + 0x2000, 0x15);
+  console.log(romName);
+}).catch((err) => {
+  console.log(err);
+});
+
 // Interprocess communication with the renderer process
 ipcMain.on('requestSharedData', (event, args) => {
   event.sender.send('sharedData', sharedData);

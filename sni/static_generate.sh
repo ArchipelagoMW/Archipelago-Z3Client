@@ -1,1 +1,1 @@
-grpc_tools_node_protoc --js_out=import_style=commonjs,namespace_prefix=sni,binary:./ --grpc_out=grpc_js:. sni.proto
+grpc_tools_node_protoc --js_out=import_style=commonjs_strict,binary:./ --grpc_out=grpc_js:. sni.proto

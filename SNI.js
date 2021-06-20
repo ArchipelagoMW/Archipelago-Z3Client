@@ -6,6 +6,8 @@ module.exports = class SNI {
   constructor(serverAddress='127.0.0.1:8191') {
     this.serverAddress = serverAddress;
     this.sniClient = new sniServices.DevicesClient(this.serverAddress, grpc.credentials.createInsecure());
+    this.devicesList = [];
+    this.currentDevice = null;
   }
 
   listDevices = () => new Promise((resolve, reject) => {
@@ -21,19 +23,37 @@ module.exports = class SNI {
           capabilities: device.getCapabilitiesList(),
         });
       }
+      this.devicesList = devicesList;
       resolve(devicesList);
     });
   });
 
-  readFromAddress = (device, address, length) => new Promise((resolve, reject) => {
-    this.sniClient.singleRead(new sniMessages.SingleReadMemoryRequest(), (err, response) => {
+  setDevice = (device) => {
+    if (this.devicesList.indexOf(device) > -1) {
+      return this.currentDevice = device;
+    }
+    throw new Error("Requested device does not exist in devicesList");
+  }
+
+  readFromAddress = (address, length) => new Promise((resolve, reject) => {
+    if (!this.currentDevice) { return reject("No device selected."); }
+    const readRequest = new sniMessages.SingleReadMemoryRequest();
+    readRequest.setUri(this.currentDevice.uri);
+    const rmr = new sniMessages.ReadMemoryRequest();
+    rmr.setRequestaddress(address);
+    rmr.setRequestaddressspace(sniMessages.AddressSpace.SNESABUS);
+    rmr.setSize(length);
+    readRequest.setRequest(rmr);
+    const memory = new sniServices.DeviceMemoryClient(this.serverAddress, grpc.credentials.createInsecure());
+    memory.singleRead(readRequest, (err, response) => {
       if (err) { return reject(err); }
-      if (!response) { return resolve(null); }
-      resolve(response);
+      if (!response) { return reject('No response.'); }
+      return resolve(response);
     });
   });
 
-  writeToAddress = (device, address, data) => new Promise((resolve, reject) => {
+  writeToAddress = (address, data) => new Promise((resolve, reject) => {
+    if (!this.currentDevice) { return reject("No device selected."); }
     this.sniClient.singleWrite(new sniMessages.SingleWriteMemoryRequest(), (err, response) => {
       if (err) { return reject(err); }
       if (!response) { return resolve(null); }
