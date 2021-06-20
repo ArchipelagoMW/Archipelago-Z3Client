@@ -38,11 +38,6 @@ window.addEventListener('load', () => {
 });
 
 const connectToServer = (address) => {
-  if (!snesSocket || snesSocket.readyState !== WebSocket.OPEN){
-    appendConsoleMessage('Unable to connect to server while SNES is not attached.');
-    return;
-  }
-
   if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
     serverSocket.close();
     serverSocket = null;
@@ -83,19 +78,17 @@ const connectToServer = (address) => {
           }
 
           // Authenticate with the server
-          if (snesSocket && snesSocket.readyState === WebSocket.OPEN){
-            const romName = await getFromAddress(ROMNAME_START, ROMNAME_SIZE);
-            const connectionData = {
-              cmd: 'Connect',
-              game: 'A Link to the Past',
-              name: btoa(await romName.text()), // Base64 encoded rom name
-              uuid: getClientId(),
-              tags: ['LttP Client'],
-              password: null, // TODO: Handle password protected lobbies
-              version: SUPPORTED_ARCHIPELAGO_VERSION,
-            };
-            serverSocket.send(JSON.stringify([connectionData]));
-          }
+          const romName = await readFromAddress(ROMNAME_START, ROMNAME_SIZE);
+          const connectionData = {
+            cmd: 'Connect',
+            game: 'A Link to the Past',
+            name: btoa(await romName.text()), // Base64 encoded rom name
+            uuid: getClientId(),
+            tags: ['LttP Client'],
+            password: null, // TODO: Handle password protected lobbies
+            version: SUPPORTED_ARCHIPELAGO_VERSION,
+          };
+          serverSocket.send(JSON.stringify([connectionData]));
           break;
 
         case 'Connected':
@@ -132,7 +125,7 @@ const connectToServer = (address) => {
             }
 
             // Fetch game mode
-            const gameMode = await getFromAddress(WRAM_START + 0x10, 0x01);
+            const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
             const modeBuffer = await gameMode.arrayBuffer();
             const modeView = new DataView(modeBuffer);
             const modeValue = modeView.getUint8(0);
@@ -142,7 +135,7 @@ const connectToServer = (address) => {
             }
 
             // Fetch game state and triforce information
-            const gameOver = await getFromAddress(SAVEDATA_START + 0x443, 0x01);
+            const gameOver = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
             const gameOverBuffer = await gameOver.arrayBuffer();
             const gameOverView = new DataView(gameOverBuffer);
             const gameOverValue = gameOverView.getUint8(0);
@@ -161,7 +154,7 @@ const connectToServer = (address) => {
 
             // Fetch information from the SNES about items it has received, and compare that against local data.
             // This fetch includes data about the room the player is currently inside of
-            const receivedItemResults = await getFromAddress(RECEIVED_ITEMS_INDEX, 0x08);
+            const receivedItemResults = await readFromAddress(RECEIVED_ITEMS_INDEX, 0x08);
             const byteBuffer = await receivedItemResults.arrayBuffer();
             const byteView = new DataView(byteBuffer);
             const romItemsReceived = byteView.getUint8(0) | (byteView.getUint8(1) << 8);
@@ -178,13 +171,13 @@ const connectToServer = (address) => {
               const indexView = new DataView(indexBuffer);
               indexView.setUint8(0, (romItemsReceived + 1) & 0xFF);
               indexView.setUint8(1, ((romItemsReceived + 1) >> 8) & 0xFF);
-              await putToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
+              await writeToAddress(RECEIVED_ITEMS_INDEX, new Blob([indexBuffer]));
 
               // Send the item to the SNES
               const itemBuffer = new ArrayBuffer(1);
               const itemView = new DataView(itemBuffer);
               itemView.setUint8(0, itemsReceived[romItemsReceived].item);
-              await putToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemBuffer]));
+              await writeToAddress(RECEIVED_ITEM_ADDRESS, new Blob([itemBuffer]));
 
               // Tell the SNES the id of the player who sent the item
               const senderBuffer = new ArrayBuffer(1);
@@ -192,7 +185,7 @@ const connectToServer = (address) => {
               // TODO: This sends the wrong player ID. Probably an off-by-one error.
               senderView.setUint8(0, (playerSlot === itemsReceived[romItemsReceived].player) ?
                 0 : itemsReceived[romItemsReceived].player)
-              await putToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
+              await writeToAddress(RECEIVED_ITEM_SENDER_ADDRESS, new Blob([senderBuffer]));
             }
 
             // If the player's current location has a scout item (an item laying on the ground), we need to
@@ -213,17 +206,17 @@ const connectToServer = (address) => {
                 const locationDataBuffer = new ArrayBuffer(1);
                 const locationDataView = new DataView(locationDataBuffer);
                 locationDataView.setUint8(0, scoutLocation);
-                await putToAddress(SCOUTREPLY_LOCATION_ADDR, new Blob([locationDataBuffer]));
+                await writeToAddress(SCOUTREPLY_LOCATION_ADDR, new Blob([locationDataBuffer]));
 
                 const itemDataBuffer = new ArrayBuffer(1);
                 const itemDataView = new DataView(itemDataBuffer);
                 itemDataView.setUint8(0, scoutedLocations[scoutLocation].item);
-                await putToAddress(SCOUTREPLY_ITEM_ADDR, new Blob([itemDataBuffer]));
+                await writeToAddress(SCOUTREPLY_ITEM_ADDR, new Blob([itemDataBuffer]));
 
                 const playerDataBuffer = new ArrayBuffer(1);
                 const playerDataView = new DataView(playerDataBuffer);
                 playerDataView.setUint8(0, scoutedLocations[scoutLocation].player);
-                await putToAddress(SCOUTREPLY_PLAYER_ADDR, new Blob([playerDataBuffer]));
+                await writeToAddress(SCOUTREPLY_PLAYER_ADDR, new Blob([playerDataBuffer]));
               }
             }
 
@@ -231,7 +224,7 @@ const connectToServer = (address) => {
             if (shopIds.indexOf(roomId) > -1) {
               // Request shop data from every shop in the game
               const requestLength = (Object.keys(SHOPS).length * 3) + 5;
-              const shopResults = await getFromAddress(SHOP_ADDR, requestLength);
+              const shopResults = await readFromAddress(SHOP_ADDR, requestLength);
               const shopBuffer = await shopResults.arrayBuffer();
               const shopView = new DataView(shopBuffer);
               // Update the purchase status of every item in every shop. This is important because
@@ -278,7 +271,7 @@ const connectToServer = (address) => {
             // The data originally fetched may not cover all of the underworld items, so the client needs to
             // fetch the remaining items to see if they have been previously obtained
             if (underworldBegin < underworldEnd) {
-              const uwResults = await getFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2);
+              const uwResults = await readFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2);
               const newChecks = [];
               const uwResultBuffer = await uwResults.arrayBuffer();
               const uwResultView = new DataView(uwResultBuffer);
@@ -307,7 +300,7 @@ const connectToServer = (address) => {
             // The data originally fetched may not cover all of the overworld items, so the client needs to
             // fetch the remaining items to see if they have been previously obtained
             if (overworldBegin < overworldEnd) {
-              const owResults = await getFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin);
+              const owResults = await readFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin);
               const newChecks = [];
               const owResultBuffer = await owResults.arrayBuffer();
               const owResultView = new DataView(owResultBuffer);
@@ -329,7 +322,7 @@ const connectToServer = (address) => {
               }
             }
             if (!npcAllChecked) {
-              const npcResults = await getFromAddress(SAVEDATA_START + 0x410, 2);
+              const npcResults = await readFromAddress(SAVEDATA_START + 0x410, 2);
               const npcResultBuffer = await npcResults.arrayBuffer();
               const npcResultView = new DataView(npcResultBuffer);
               const npcValue = npcResultView.getUint8(0) | (npcResultView.getUint8(1) << 8);
@@ -353,7 +346,7 @@ const connectToServer = (address) => {
               }
             }
             if (!miscAllChecked) {
-              const miscResults = await getFromAddress(SAVEDATA_START + 0x3c6, 4);
+              const miscResults = await readFromAddress(SAVEDATA_START + 0x3c6, 4);
               const miscResultBuffer = await miscResults.arrayBuffer();
               const miscResultView = new DataView(miscResultBuffer);
               const newChecks = [];

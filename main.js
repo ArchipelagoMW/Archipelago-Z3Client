@@ -96,14 +96,6 @@ app.whenReady().then(async () => {
     }
   }
 
-  // Launch SNI if it is not running
-  const exec = require('child_process').exec;
-  exec('tasklist', (err, stdout, stderr) => {
-    if (stdout.search('sni.exe') === -1) {
-      childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
-    }
-  });
-
   // Create a new ROM from the patch file if the patch file is provided and the base rom is known
   for (const arg of process.argv) {
     if (arg.substr(-5).toLowerCase() === '.apbp') {
@@ -147,16 +139,15 @@ app.whenReady().then(async () => {
   });
 });
 
-const sni = new SNI();
-sni.listDevices().then(async () => {
-  sni.setDevice(sni.devicesList[0]);
-  const romName = await sni.readFromAddress(0xE00000 + 0x2000, 0x15);
-  console.log(romName);
-}).catch((err) => {
-  console.log(err);
+// Launch SNI if it is not running
+const exec = require('child_process').exec;
+exec('tasklist', (err, stdout, stderr) => {
+  if (stdout.search('sni.exe') === -1) {
+    childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
+  }
 });
 
-// Interprocess communication with the renderer process
+// Interprocess communication with the renderer process, all are asynchronous events
 ipcMain.on('requestSharedData', (event, args) => {
   event.sender.send('sharedData', sharedData);
 });
@@ -174,4 +165,20 @@ ipcMain.on('setLauncher', (event, args) => {
       launcherPath: launcherPath[0],
     })));
   }
+});
+
+// Interprocess communication with the renderer process related to SNI, all are synchronous events
+const sni = new SNI();
+ipcMain.handle('fetchDevices', async (event, args) => {
+  return await sni.fetchDevices();
+});
+ipcMain.handle('setDevice', async (event, device) => {
+  sni.setDevice(device);
+  return true;
+});
+ipcMain.handle('readFromAddress', async (event, args) => {
+  return await sni.readFromAddress(args[0], args[1]);
+});
+ipcMain.handle('writeToAddress', async (event, args) => {
+  return await sni.writeToAddress(args[0], args[1]);
 });

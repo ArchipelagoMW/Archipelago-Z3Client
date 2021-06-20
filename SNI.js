@@ -10,7 +10,7 @@ module.exports = class SNI {
     this.currentDevice = null;
   }
 
-  listDevices = () => new Promise((resolve, reject) => {
+  fetchDevices = () => new Promise((resolve, reject) => {
     this.sniClient.listDevices(new sniMessages.DevicesRequest(), (err, response) => {
       if (err) { return reject(err); }
       if (!response) { return resolve([]); }
@@ -29,10 +29,15 @@ module.exports = class SNI {
   });
 
   setDevice = (device) => {
-    if (this.devicesList.indexOf(device) > -1) {
-      return this.currentDevice = device;
+    const matchingDevices = this.devicesList.filter(existing => existing.uri === device.uri);
+    switch (matchingDevices.length) {
+      case 0:
+        throw new Error(`Requested device ${device} does not exist in devicesList.`);
+      case 1:
+        return this.currentDevice = device;
+      default:
+        throw new Error("More than one existing device matches the provided device URI.");
     }
-    throw new Error("Requested device does not exist in devicesList");
   }
 
   /**
