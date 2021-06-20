@@ -54,10 +54,18 @@ module.exports = class SNI {
 
   writeToAddress = (address, data) => new Promise((resolve, reject) => {
     if (!this.currentDevice) { return reject("No device selected."); }
-    this.sniClient.singleWrite(new sniMessages.SingleWriteMemoryRequest(), (err, response) => {
+    const writeRequest = new sniMessages.SingleWriteMemoryRequest();
+    writeRequest.setUri(this.currentDevice.uri);
+    const wmr = new sniMessages.WriteMemoryRequest();
+    wmr.setRequestaddress(address);
+    wmr.setRequestaddressspace(sniMessages.AddressSpace.SNESABUS);
+    wmr.setData(data);
+    writeRequest.setRequest(wmr);
+    const memory = new sniServices.DeviceMemoryClient(this.serverAddress, grpc.credentials.createInsecure());
+    memory.singleWrite(writeRequest, (err, response) => {
       if (err) { return reject(err); }
-      if (!response) { return resolve(null); }
-      resolve(response);
+      if (!response) { return reject('No response.'); }
+      return resolve(response);
     });
   });
 }
