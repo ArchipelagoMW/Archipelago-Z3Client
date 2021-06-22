@@ -342,7 +342,7 @@ const connectToServer = (address) => {
               // Send new checks if there are any
               if (newChecks.length > 0) { sendLocationChecks(newChecks); }
             }
-          });
+          }, 5000);
           break;
 
         case 'ConnectionRefused':

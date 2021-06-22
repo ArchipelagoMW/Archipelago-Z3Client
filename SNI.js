@@ -122,7 +122,7 @@ module.exports = class SNI {
     if (!this.currentDevice) { return reject("No device selected."); }
     if (this.addressSpace === null) { return reject("No address space selected."); }
     if (this.memoryMap === null) { return reject("No memory map selected."); }
-    if (!data.instanceOf(Uint8Array)) { reject("Data must be a Uint8Array."); }
+    if (!data instanceof Uint8Array) { reject("Data must be a Uint8Array."); }
 
     const writeRequest = new sniMessages.SingleWriteMemoryRequest();
     writeRequest.setUri(this.currentDevice.uri);
