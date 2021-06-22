@@ -169,6 +169,7 @@ ipcMain.on('setLauncher', (event, args) => {
 
 // Interprocess communication with the renderer process related to SNI, all are synchronous events
 const sni = new SNI();
+sni.setAddressSpace(SNI.supportedAddressSpaces.FXPAKPRO); // We support communicating with FXPak devices
 sni.setMemoryMap(SNI.supportedMemoryMaps.LOROM); // ALttP uses LOROM
 
 ipcMain.handle('fetchDevices', async (event, args) => {

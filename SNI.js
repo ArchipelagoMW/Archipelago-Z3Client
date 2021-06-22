@@ -4,12 +4,17 @@ const sniServices = require('./sni/sni_grpc_pb');
 
 module.exports = class SNI {
   static supportedMemoryMaps = {
-    LOROM: sniMessages.LOROM, // ALttP
-    HIROM: sniMessages.HIROM, // Super Metroid
-    EXHIROM: sniMessages.EXHIROM, // ALttP + SM
+    LOROM: sniMessages.MemoryMapping.LOROM, // ALttP
+    HIROM: sniMessages.MemoryMapping.HIROM, // Super Metroid
+    EXHIROM: sniMessages.MemoryMapping.EXHIROM, // ALttP + SM
 
     // Not supported yet
     // BSX: sniMessages.BSX,
+  };
+
+  static supportedAddressSpaces = {
+    FXPAKPRO: sniMessages.AddressSpace.FXPAKPRO,
+    SNESABUS: sniMessages.AddressSpace.SNESABUS,
   };
 
   constructor(serverAddress='127.0.0.1:8191') {
@@ -17,7 +22,8 @@ module.exports = class SNI {
     this.sniClient = new sniServices.DevicesClient(this.serverAddress, grpc.credentials.createInsecure());
     this.devicesList = [];
     this.currentDevice = null;
-    this.memoryMap = 0;
+    this.addressSpace = null;
+    this.memoryMap = null;
   }
 
   fetchDevices = () => new Promise((resolve, reject) => {
@@ -51,6 +57,28 @@ module.exports = class SNI {
   }
 
   /**
+   * Set the address space to be used when communicating with the SNES.
+   * If you need to communicate with an SD2SNES or FXPak Pro, or you are working with software which already contains
+   * memory addresses for use with QUsb2Snes or Usb2Snes, you should use the FXPAKPRO address space.
+   * Otherwise, you probably want SNESABUS.
+   *
+   * From the developer of SNI (JSD):
+   * FXPAKPRO makes the ROM data appear linearly and will be less of a mindfuck to handle if you expect ROM data to
+   * be linearly mapped
+   * SNESABUS will spread the ROM data all over the memory map and be mirrored several times as well
+   * If you're literally a SNES ASM god, use SNESABUS space because FXPAKPRO will confuse you
+   * If you're a PC programming god, use FXPAKPRO because SNESABUS will infuriate you
+   * @param addressSpace
+   */
+  setAddressSpace = (addressSpace) => {
+    if (!Object.values(SNI.supportedAddressSpaces).includes(addressSpace)) {
+      throw new Error(`Requested address space ${addressSpace} is not among supported address spaces. ` +
+        `Supported spaces include: ${SNI.supportedAddressSpaces}`);
+    }
+    this.addressSpace = addressSpace;
+  };
+
+  /**
    * Set the memory map type to be used when requesting against the SNES
    * @param mapType 0 = Unknown, 1 = HiROM, 2 = LoROM, 3 = ExHiROM, 4 = BSX
    */
@@ -70,13 +98,14 @@ module.exports = class SNI {
    */
   readFromAddress = (address, length) => new Promise((resolve, reject) => {
     if (!this.currentDevice) { return reject("No device selected."); }
-    if (!this.memoryMap) { return reject("No memory map selected."); }
+    if (this.addressSpace === null) { return reject("No address space selected."); }
+    if (this.memoryMap === null) { return reject("No memory map selected."); }
 
     const readRequest = new sniMessages.SingleReadMemoryRequest();
     readRequest.setUri(this.currentDevice.uri);
     const rmr = new sniMessages.ReadMemoryRequest();
     rmr.setRequestaddress(address);
-    rmr.setRequestaddressspace(sniMessages.AddressSpace.SNESABUS);
+    rmr.setRequestaddressspace(this.addressSpace);
     rmr.setRequestmemorymapping(this.memoryMap);
     rmr.setSize(length);
     readRequest.setRequest(rmr);
@@ -84,20 +113,22 @@ module.exports = class SNI {
     memory.singleRead(readRequest, (err, response) => {
       if (err) { return reject(err); }
       if (!response) { return reject('No response.'); }
-      return resolve(response.array[1][response.array[1].length - 1]);
+      const responseData = response.getResponse().getData();
+      return resolve(responseData);
     });
   });
 
   writeToAddress = (address, data) => new Promise((resolve, reject) => {
     if (!this.currentDevice) { return reject("No device selected."); }
-    if (!this.memoryMap) { return reject("No memory map selected."); }
+    if (this.addressSpace === null) { return reject("No address space selected."); }
+    if (this.memoryMap === null) { return reject("No memory map selected."); }
     if (!data.instanceOf(Uint8Array)) { reject("Data must be a Uint8Array."); }
 
     const writeRequest = new sniMessages.SingleWriteMemoryRequest();
     writeRequest.setUri(this.currentDevice.uri);
     const wmr = new sniMessages.WriteMemoryRequest();
     wmr.setRequestaddress(address);
-    wmr.setRequestaddressspace(sniMessages.AddressSpace.SNESABUS);
+    wmr.setRequestaddressspace(this.addressSpace);
     wmr.setRequestmemorymapping(this.memoryMap);
     wmr.setData(Buffer.from(data));
     writeRequest.setRequest(wmr);

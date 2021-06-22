@@ -10,11 +10,20 @@ window.addEventListener('load', async () => {
     snesStatus.classList.remove('connected');
     snesStatus.classList.add('disconnected');
 
+    if (event.target.value === '-1') {
+      if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { serverSocket.close(); }
+      return;
+    }
+
     await setSnesDevice(event.target.value);
   });
 
   // If the user presses the refresh button, reset the SNES connection entirely
   document.getElementById('snes-device-refresh').addEventListener('click', async () => {
+    const snesStatus = document.getElementById('snes-device-status');
+    snesStatus.innerText = 'Not Connected';
+    snesStatus.classList.remove('connected');
+    snesStatus.classList.add('disconnected');
     await initializeSNIConnection();
   });
 
@@ -28,7 +37,6 @@ window.addEventListener('load', async () => {
 
 const initializeSNIConnection = async (requestedDevice = null) => {
   deviceList = await window.sni.fetchDevices();
-  console.log(deviceList);
 
   // Clear the current device list
   const snesSelect = document.getElementById('snes-device');
@@ -85,9 +93,8 @@ const setSnesDevice = async (device) => {
  */
 const readFromAddress = (hexOffset, byteCountInHex) => new Promise(async (resolve, reject) => {
   window.sni.readFromAddress(hexOffset, byteCountInHex)
-    .then((result) => {
-      console.debug(result);
-      resolve(result)
+    .then(async (result) => {
+      resolve(result);
     })
     .catch((err) => {
       console.error(err);
