@@ -8,9 +8,6 @@ let reconnectAttempts = 0;
 let snesWatcherInterval = null;
 let reconnectInterval = null;
 
-// Additional loop controls for the SNES watcher
-let gameComplete = false;
-
 // Location Ids provided by the server
 let checkedLocations = [];
 let missingLocations = [];
@@ -118,18 +115,13 @@ const connectToServer = (address) => {
           // Create an array containing only shopIds
           const shopIds = Object.values(SHOPS).map((shop) => shop.locationId);
 
-          snesWatcherInterval = setInterval(async () => {
-            if (gameComplete) {
-              clearInterval(snesWatcherInterval);
-              return;
-            }
-
+          const snesLoop = async () => {
             // Fetch game mode
             const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
             const modeValue = gameMode[0];
             // If game mode is unknown or not present, do not attempt to fetch or write data to the SNES
             if (!modeValue || (INGAME_MODES.indexOf(modeValue) === -1 && ENDGAME_MODES.indexOf(modeValue) === -1)) {
-              return;
+              return snesLoop();
             }
 
             // Fetch game state and triforce information
@@ -142,8 +134,6 @@ const connectToServer = (address) => {
                   status: CLIENT_STATUS.CLIENT_GOAL,
                 }]));
               }
-
-              gameComplete = true;
               return;
             }
 
@@ -342,7 +332,12 @@ const connectToServer = (address) => {
               // Send new checks if there are any
               if (newChecks.length > 0) { sendLocationChecks(newChecks); }
             }
-          }, 5000);
+
+            // Keep on loopin'
+            setTimeout(snesLoop);
+          };
+
+          snesLoop();
           break;
 
         case 'ConnectionRefused':
@@ -442,25 +437,17 @@ const connectToServer = (address) => {
     serverStatus.innerText = 'Not Connected';
     serverStatus.classList.add('disconnected');
 
-    // Don't bother querying the snes if the server is disconnected
-    if (snesWatcherInterval) {
-      clearInterval(snesWatcherInterval);
-      snesWatcherInterval = null;
-    }
-
     // Attempt to reconnect to the AP server
     // If the user cleared the server address, do nothing
     const serverAddress = document.getElementById('server-address').value;
     if (!serverAddress) { return; }
 
-    // Attempt to reconnect once every ten seconds, up to the maximum number of retry attempts
-    reconnectInterval = setInterval(() => {
-      if (++reconnectAttempts > maxReconnectAttempts) {
-        clearInterval(reconnectInterval);
-        reconnectInterval = null;
-      }
-      appendConsoleMessage(`Trying to reconnect to AP server (${reconnectAttempts} of ${maxReconnectAttempts})...`);
-      connectToServer(serverAddress);
+    // Attempt to reconnect to the AP server
+    setTimeout(() => {
+      if (++reconnectAttempts > maxReconnectAttempts) { return; }
+      appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
+        `(${reconnectAttempts} of ${maxReconnectAttempts})`);
+      connectToServer(address);
     }, 5000);
   };
 

@@ -172,16 +172,7 @@ const sni = new SNI();
 sni.setAddressSpace(SNI.supportedAddressSpaces.FXPAKPRO); // We support communicating with FXPak devices
 sni.setMemoryMap(SNI.supportedMemoryMaps.LOROM); // ALttP uses LOROM
 
-ipcMain.handle('fetchDevices', async (event, args) => {
-  return await sni.fetchDevices();
-});
-ipcMain.handle('setDevice', async (event, device) => {
-  sni.setDevice(device);
-  return true;
-});
-ipcMain.handle('readFromAddress', async (event, args) => {
-  return await sni.readFromAddress(args[0], args[1]);
-});
-ipcMain.handle('writeToAddress', async (event, args) => {
-  return await sni.writeToAddress(args[0], args[1]);
-});
+ipcMain.handle('fetchDevices', sni.fetchDevices);
+ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
+ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
+ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
