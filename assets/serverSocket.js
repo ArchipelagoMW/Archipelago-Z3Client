@@ -31,6 +31,7 @@ window.addEventListener('load', () => {
     // If the input value is empty, do not attempt to reconnect
     if (!event.target.value) {
       if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+        lastServerAddress = null;
         serverSocket.close();
         serverSocket = null;
       }
@@ -98,6 +99,9 @@ const connectToServer = (address) => {
           break;
 
         case 'Connected':
+          // Save the last server that was successfully connected to
+          lastServerAddress = address;
+
           // Reset reconnection info if necessary
           reconnectAttempts = 0;
           if (reconnectInterval) {
@@ -124,7 +128,7 @@ const connectToServer = (address) => {
           // Create an array containing only shopIds
           const shopIds = Object.values(SHOPS).map((shop) => shop.locationId);
 
-          const snesInterval = setInterval(async () => {
+          snesInterval = setInterval(async () => {
             try{
               // Prevent the interval from running concurrently with itself. If more than one iteration of this
               // function is active at any given time, it wil result in reading and writing areas of the SRAM out of

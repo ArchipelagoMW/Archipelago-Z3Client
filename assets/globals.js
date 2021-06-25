@@ -16,6 +16,7 @@ const SUPPORTED_ARCHIPELAGO_VERSION = {
 // Archipelago server
 const DEFAULT_SERVER_PORT = 38281;
 let serverSocket = null;
+let lastServerAddress = null;
 
 // Players in the current game, received from Connected server packet
 let playerSlot = null;

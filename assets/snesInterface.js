@@ -14,6 +14,7 @@ window.addEventListener('load', async () => {
 
     snesDevice = parseInt(event.target.value, 10);
     await setSnesDevice(event.target.value);
+    if (lastServerAddress) { connectToServer(lastServerAddress); }
   });
 
   // If the user presses the refresh button, reset the SNES connection entirely
@@ -73,7 +74,10 @@ const initializeSNIConnection = async (requestedDevice = null) => {
   if (deviceList.length === 1) {
     snesSelect.value = 0;
     snesDevice = 0;
-    return await setSnesDevice(0);
+    await setSnesDevice(0);
+
+    // If the client was previously connected to an AP server, attempt to reconnect to it
+    if (lastServerAddress) { connectToServer(lastServerAddress); }
   }
 };
 
