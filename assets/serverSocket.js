@@ -73,7 +73,7 @@ const connectToServer = (address) => {
             command.forfeit_mode[0].toUpperCase() + command.forfeit_mode.substring(1).toLowerCase();
           document.getElementById('remaining-mode').innerText =
             command.remaining_mode[0].toUpperCase() + command.remaining_mode.substring(1).toLowerCase();
-          document.getElementById('hint-cost').innerText = command.hint_cost.toString();
+          hintCost = Number(command.hint_cost);
           document.getElementById('points-per-check').innerText = command.location_check_points.toString();
 
           // Update the local cache of location and item maps if necessary
@@ -115,6 +115,10 @@ const connectToServer = (address) => {
           // Store the reported location check data from the server. They are arrays of locationIds
           checkedLocations = command.checked_locations;
           missingLocations = command.missing_locations;
+
+          // Set the hint cost text
+          document.getElementById('hint-cost').innerText =
+            (Math.round((hintCost / 100) * (checkedLocations.length + missingLocations.length))).toString();
 
           // Update header text
           serverStatus.classList.remove('disconnected');
@@ -440,7 +444,9 @@ const connectToServer = (address) => {
           }
 
           if (command.hasOwnProperty('hint_cost')) {
-            document.getElementById('hint-cost').innerText = command.hint_cost.toString();
+            hintCost = Number(command.hint_cost);
+            document.getElementById('hint-cost').innerText =
+              (Math.round((hintCost / 100) * (checkedLocations.length + missingLocations.length))).toString();
           }
 
           if (command.hasOwnProperty('location_check_points')) {

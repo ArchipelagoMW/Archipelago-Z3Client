@@ -3,7 +3,7 @@ const CLIENT_VERSION = {
   state: 'Beta',
   major: 0,
   minor: 10,
-  patch: 0,
+  patch: 1,
 };
 
 const SUPPORTED_ARCHIPELAGO_VERSION = {
@@ -23,6 +23,7 @@ let serverAuthError = false;
 let playerSlot = null;
 let playerTeam = null;
 let players = [];
+let hintCost = null;
 
 // Location and item maps, populated from localStorage
 let itemsById = {};
