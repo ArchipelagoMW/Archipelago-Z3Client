@@ -47,6 +47,9 @@ const connectToServer = (address) => {
     serverSocket = null;
   }
 
+  // This is a new connection attempt, no auth error has occurred yet
+  serverAuthError = false;
+
   // If there are no SNES devices available, do nothing
   if (snesDevice === null) { return; }
 
@@ -361,28 +364,24 @@ const connectToServer = (address) => {
               // Keep on loopin'
               snesIntervalComplete = true;
             } catch (err) {
-              if (err.message.search(/i\/o timeout/) > -1) {
-                // Notify the user that the SNES device is no longer available
-                new Notification('SNES Device Disconnected', {
-                  body: 'There was a problem communicating with your SNES device.',
-                });
-                appendConsoleMessage('There was a problem communicating with your SNES device. Please ensure it ' +
-                  'is powered on, the ROM is loaded, and it is connected to your computer.');
+              // Notify the user that the SNES device is no longer available
+              new Notification('SNES Device Disconnected', {
+                body: 'There was a problem communicating with your SNES device.',
+              });
+              appendConsoleMessage('There was a problem communicating with your SNES device. Please ensure it ' +
+                'is powered on, the ROM is loaded, and it is connected to your computer.');
 
-                // Do not send requests to the SNES device if the device is unavailable
-                clearInterval(snesInterval);
-                snesIntervalComplete = true;
+              // Do not send requests to the SNES device if the device is unavailable
+              clearInterval(snesInterval);
+              snesIntervalComplete = true;
 
-                // Disconnect from the AP server
-                if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
-                  serverSocket.close();
-                }
-
-                snesDevice = null;
-                return setTimeout(initializeSNIConnection, 5000);
+              // Disconnect from the AP server
+              if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                serverSocket.close();
               }
 
-              appendConsoleMessage(err);
+              snesDevice = null;
+              setTimeout(initializeSNIConnection, 5000);
               snesIntervalComplete = true;
             }
           });
@@ -393,6 +392,8 @@ const connectToServer = (address) => {
           serverStatus.innerText = 'Not Connected';
           serverStatus.classList.add('disconnected');
           if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+            appendConsoleMessage(`Error while connecting to AP server: ${command.errors.join(', ')}.`);
+            serverAuthError = true;
             serverSocket.close();
           }
           break;
@@ -501,6 +502,14 @@ const connectToServer = (address) => {
       }
       appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
         `(${reconnectAttempts} of ${maxReconnectAttempts})`);
+
+      // Do not attempt to reconnect if a server connection exists already. This can happen if a user attempts
+      // to connect to a new server after connecting to a previous one
+      if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { return; }
+
+      // If the socket was closed in response to an auth error, do not reconnect
+      if (serverAuthError) { return }
+
       connectToServer(address);
     }, 5000);
   };
