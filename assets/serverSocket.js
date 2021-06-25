@@ -47,7 +47,7 @@ const connectToServer = (address) => {
   }
 
   // If there are no SNES devices available, do nothing
-  if (deviceList.length === 0) { return; }
+  if (snesDevice === null) { return; }
 
   // Attempt to connect to the server
   const serverAddress = (address.search(/.*:\d+/) > -1) ? address : `${address}:${DEFAULT_SERVER_PORT}`;
@@ -358,14 +358,24 @@ const connectToServer = (address) => {
               snesIntervalComplete = true;
             } catch (err) {
               if (err.message.search(/i\/o timeout/) > -1) {
+                // Notify the user that the SNES device is no longer available
                 new Notification('SNES Device Disconnected', {
                   body: 'There was a problem communicating with your SNES device.',
                 });
                 appendConsoleMessage('There was a problem communicating with your SNES device. Please ensure it ' +
                   'is powered on, the ROM is loaded, and it is connected to your computer.');
+
+                // Do not send requests to the SNES device if the device is unavailable
                 clearInterval(snesInterval);
                 snesIntervalComplete = true;
-                setTimeout(initializeSNIConnection, 5000);
+
+                // Disconnect from the AP server
+                if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                  serverSocket.close();
+                }
+
+                snesDevice = null;
+                return setTimeout(initializeSNIConnection, 5000);
               }
 
               appendConsoleMessage(err);
@@ -471,12 +481,13 @@ const connectToServer = (address) => {
     serverStatus.innerText = 'Not Connected';
     serverStatus.classList.add('disconnected');
 
-    // Attempt to reconnect to the AP server
     // If the user cleared the server address, do nothing
     const serverAddress = document.getElementById('server-address').value;
     if (!serverAddress) { return; }
 
     // Attempt to reconnect to the AP server
+    if (snesDevice === null) { return; }
+
     setTimeout(() => {
       if (++reconnectAttempts > maxReconnectAttempts) {
         new Notification('Archipelago Server Connection Lost', {

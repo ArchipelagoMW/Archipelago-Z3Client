@@ -1,4 +1,5 @@
 let deviceList = [];
+let snesDevice = null;
 
 window.addEventListener('load', async () => {
   await initializeSNIConnection();
@@ -7,9 +8,11 @@ window.addEventListener('load', async () => {
   document.getElementById('snes-device').addEventListener('change', async (event) => {
     if (event.target.value === '-1') {
       if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { serverSocket.close(); }
+      snesDevice = null;
       return;
     }
 
+    snesDevice = parseInt(event.target.value, 10);
     await setSnesDevice(event.target.value);
   });
 
@@ -69,6 +72,7 @@ const initializeSNIConnection = async (requestedDevice = null) => {
   // If only one device is available, connect to it
   if (deviceList.length === 1) {
     snesSelect.value = 0;
+    snesDevice = 0;
     return await setSnesDevice(0);
   }
 };
