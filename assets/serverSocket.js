@@ -5,7 +5,8 @@ const maxReconnectAttempts = 10;
 let reconnectAttempts = 0;
 
 // Control variable for the SNES watcher. Contains an interval (see MDN: setInterval)
-let snesWatcherInterval = null;
+let snesInterval = null;
+let snesIntervalComplete = true;
 let reconnectInterval = null;
 
 // Location Ids provided by the server
@@ -28,7 +29,12 @@ window.addEventListener('load', () => {
     if (event.key !== 'Enter') { return; }
 
     // If the input value is empty, do not attempt to reconnect
-    if (!event.target.value) { return; }
+    if (!event.target.value) {
+      if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+        serverSocket.close();
+        serverSocket = null;
+      }
+    }
 
     connectToServer(event.target.value);
   });
@@ -39,6 +45,9 @@ const connectToServer = (address) => {
     serverSocket.close();
     serverSocket = null;
   }
+
+  // If there are no SNES devices available, do nothing
+  if (deviceList.length === 0) { return; }
 
   // Attempt to connect to the server
   const serverAddress = (address.search(/.*:\d+/) > -1) ? address : `${address}:${DEFAULT_SERVER_PORT}`;
@@ -115,229 +124,254 @@ const connectToServer = (address) => {
           // Create an array containing only shopIds
           const shopIds = Object.values(SHOPS).map((shop) => shop.locationId);
 
-          const snesLoop = async () => {
-            // Fetch game mode
-            const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
-            const modeValue = gameMode[0];
-            // If game mode is unknown or not present, do not attempt to fetch or write data to the SNES
-            if (!modeValue || (INGAME_MODES.indexOf(modeValue) === -1 && ENDGAME_MODES.indexOf(modeValue) === -1)) {
-              return snesLoop();
-            }
-
-            // Fetch game state and triforce information
-            const gameOver = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
-            if (gameOver[0] || ENDGAME_MODES.indexOf(modeValue) > -1) {
-              // If the game has ended or the payer has acquired the triforce, stop interacting with the SNES
-              if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
-                serverSocket.send(JSON.stringify([{
-                  cmd: 'StatusUpdate',
-                  status: CLIENT_STATUS.CLIENT_GOAL,
-                }]));
+          const snesInterval = setInterval(async () => {
+            try{
+              // Prevent the interval from running concurrently with itself. If more than one iteration of this
+              // function is active at any given time, it wil result in reading and writing areas of the SRAM out of
+              // order, causing the item index store in the SRAM to be invalid
+              if (!snesIntervalComplete) {
+                return;
               }
-              return;
-            }
 
-            // Fetch information from the SNES about items it has received, and compare that against local data.
-            // This fetch includes data about the room the player is currently inside of
-            const receivedItems = await readFromAddress(RECEIVED_ITEMS_INDEX, 0x08);
-            const romItemsReceived = receivedItems[0] | (receivedItems[1] << 8);
-            const linkHoldingUpItem = receivedItems[2];
-            const roomId = receivedItems[4] | (receivedItems[5] << 8);
-            const roomData = receivedItems[6];
-            const scoutLocation = receivedItems[7];
+              // The SNES interval is now in progress, don't start another one
+              snesIntervalComplete = false;
 
-            // If there are still items needing to be sent, and Link is not in the middle of
-            // receiving something, send the item to the SNES
-            if (receiveItems && (romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
-              // Increment the counter of items sent to the ROM
-              const indexData = new Uint8Array(2);
-              indexData.set([
-                (romItemsReceived + 1) & 0xFF,
-                ((romItemsReceived + 1) >> 8) & 0xFF,
-              ]);
-              await writeToAddress(RECEIVED_ITEMS_INDEX, indexData);
-
-              // Send the item to the SNES
-              const itemData = new Uint8Array(1);
-              itemData.set([itemsReceived[romItemsReceived].item])
-              await writeToAddress(RECEIVED_ITEM_ADDRESS, itemData);
-
-              // Tell the SNES the id of the player who sent the item
-              const senderData = new Uint8Array(1);
-              senderData.set([
-                // TODO: This sends the wrong player ID. Probably an off-by-one error.
-                (playerSlot === itemsReceived[romItemsReceived].player) ? 0 : itemsReceived[romItemsReceived].player
-              ]);
-              await writeToAddress(RECEIVED_ITEM_SENDER_ADDRESS, senderData);
-            }
-
-            // If the player's current location has a scout item (an item laying on the ground), we need to
-            // send that item's ID to the server so it can tell us what that item is, then we need to update
-            // the SNES with the item data. This is mostly useful for remote item games, which Z3 does not
-            // yet implement, but may in the future.
-            if (scoutLocation > 0){
-              // If the scouted item is not in the list of scouted locations stored by the client, send
-              // the scout data to the server
-              if (!scoutedLocations.hasOwnProperty(scoutLocation)) {
-                serverSocket.send(JSON.stringify([{
-                  cmd: 'LocationScouts',
-                  locations: [scoutLocation],
-                }]));
-              } else {
-                // If the scouted item is present in the list of scout locations stored by the client, we
-                // update the SNES with information about the item
-                const locationData = new Uint8Array(1);
-                locationData.set([scoutLocation]);
-                await writeToAddress(SCOUTREPLY_LOCATION_ADDR, locationData);
-
-                const scoutItemData = new Uint8Array(1);
-                scoutItemData.set([scoutedLocations[scoutLocation].item]);
-                await writeToAddress(SCOUTREPLY_ITEM_ADDR, scoutItemData);
-
-                const playerData = new Uint8Array(1);
-                playerData.set([scoutedLocations[scoutLocation].player]);
-                await writeToAddress(SCOUTREPLY_PLAYER_ADDR, playerData);
+              // Fetch game mode
+              const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
+              const modeValue = gameMode[0];
+              // If game mode is unknown or not present, do not attempt to fetch or write data to the SNES
+              if (!modeValue || (INGAME_MODES.indexOf(modeValue) === -1 && ENDGAME_MODES.indexOf(modeValue) === -1)) {
+                snesIntervalComplete = true;
+                return;
               }
-            }
 
-            // If the player is currently inside a shop
-            if (shopIds.indexOf(roomId) > -1) {
-              // Request shop data from every shop in the game
-              const requestLength = (Object.keys(SHOPS).length * 3) + 5;
-              const shopData = await readFromAddress(SHOP_ADDR, requestLength);
-              // Update the purchase status of every item in every shop. This is important because
-              // multiple shops can sell the same item, like a quiver when in retro mode
-              const newChecks = [];
-              for (let index = 0; index < requestLength; ++index) {
-                if (shopData[index] && checkedLocations.indexOf(SHOP_ID_START + index) === -1) {
-                  newChecks.push(SHOP_ID_START + index)
+              // Fetch game state and triforce information
+              const gameOver = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
+              if (gameOver[0] || ENDGAME_MODES.indexOf(modeValue) > -1) {
+                // If the game has ended or the payer has acquired the triforce, stop interacting with the SNES
+                if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                  serverSocket.send(JSON.stringify([{
+                    cmd: 'StatusUpdate',
+                    status: CLIENT_STATUS.CLIENT_GOAL,
+                  }]));
+                }
+                return clearInterval(snesInterval);
+              }
+
+              // Fetch information from the SNES about items it has received, and compare that against local data.
+              // This fetch includes data about the room the player is currently inside of
+              const receivedItems = await readFromAddress(RECEIVED_ITEMS_INDEX, 0x08);
+              const romItemsReceived = receivedItems[0] | (receivedItems[1] << 8);
+              const linkHoldingUpItem = receivedItems[2];
+              const roomId = receivedItems[4] | (receivedItems[5] << 8);
+              const roomData = receivedItems[6];
+              const scoutLocation = receivedItems[7];
+
+              // If there are still items needing to be sent, and Link is not in the middle of
+              // receiving something, send the item to the SNES
+              if (receiveItems && (romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
+                // Increment the counter of items sent to the ROM
+                const indexData = new Uint8Array(2);
+                indexData.set([
+                  (romItemsReceived + 1) & 0xFF,
+                  ((romItemsReceived + 1) >> 8) & 0xFF,
+                ]);
+                await writeToAddress(RECEIVED_ITEMS_INDEX, indexData);
+
+                // Send the item to the SNES
+                const itemData = new Uint8Array(1);
+                itemData.set([itemsReceived[romItemsReceived].item])
+                await writeToAddress(RECEIVED_ITEM_ADDRESS, itemData);
+
+                // Tell the SNES the id of the player who sent the item
+                const senderData = new Uint8Array(1);
+                senderData.set([
+                  // TODO: This sends the wrong player ID. Probably an off-by-one error.
+                  (playerSlot === itemsReceived[romItemsReceived].player) ? 0 : itemsReceived[romItemsReceived].player
+                ]);
+                await writeToAddress(RECEIVED_ITEM_SENDER_ADDRESS, senderData);
+              }
+
+              // If the player's current location has a scout item (an item laying on the ground), we need to
+              // send that item's ID to the server so it can tell us what that item is, then we need to update
+              // the SNES with the item data. This is mostly useful for remote item games, which Z3 does not
+              // yet implement, but may in the future.
+              if (scoutLocation > 0){
+                // If the scouted item is not in the list of scouted locations stored by the client, send
+                // the scout data to the server
+                if (!scoutedLocations.hasOwnProperty(scoutLocation)) {
+                  serverSocket.send(JSON.stringify([{
+                    cmd: 'LocationScouts',
+                    locations: [scoutLocation],
+                  }]));
+                } else {
+                  // If the scouted item is present in the list of scout locations stored by the client, we
+                  // update the SNES with information about the item
+                  const locationData = new Uint8Array(1);
+                  locationData.set([scoutLocation]);
+                  await writeToAddress(SCOUTREPLY_LOCATION_ADDR, locationData);
+
+                  const scoutItemData = new Uint8Array(1);
+                  scoutItemData.set([scoutedLocations[scoutLocation].item]);
+                  await writeToAddress(SCOUTREPLY_ITEM_ADDR, scoutItemData);
+
+                  const playerData = new Uint8Array(1);
+                  playerData.set([scoutedLocations[scoutLocation].player]);
+                  await writeToAddress(SCOUTREPLY_PLAYER_ADDR, playerData);
                 }
               }
-              if (newChecks.length > 0) { sendLocationChecks(newChecks); }
-            }
 
-            // TODO: Is this chunk of code necessary? All item locations are scanned below this block
-            // If the current room is unknown, do nothing. This happens if no check has been made yet
-            if (locationsByRoomId.hasOwnProperty(roomId)) {
-              // If there are new checks in this room, send them to the server
-              const newChecks = [];
-              for (const location of locationsByRoomId['underworld'][roomId]) {
+              // If the player is currently inside a shop
+              if (shopIds.indexOf(roomId) > -1) {
+                // Request shop data from every shop in the game
+                const requestLength = (Object.keys(SHOPS).length * 3) + 5;
+                const shopData = await readFromAddress(SHOP_ADDR, requestLength);
+                // Update the purchase status of every item in every shop. This is important because
+                // multiple shops can sell the same item, like a quiver when in retro mode
+                const newChecks = [];
+                for (let index = 0; index < requestLength; ++index) {
+                  if (shopData[index] && checkedLocations.indexOf(SHOP_ID_START + index) === -1) {
+                    newChecks.push(SHOP_ID_START + index)
+                  }
+                }
+                if (newChecks.length > 0) { sendLocationChecks(newChecks); }
+              }
+
+              // TODO: Is this chunk of code necessary? All item locations are scanned below this block
+              // If the current room is unknown, do nothing. This happens if no check has been made yet
+              if (locationsByRoomId.hasOwnProperty(roomId)) {
+                // If there are new checks in this room, send them to the server
+                const newChecks = [];
+                for (const location of locationsByRoomId['underworld'][roomId]) {
+                  if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                  if (((roomData << 4) & location.mask) !== 0) {
+                    newChecks.push(location.locationId);
+                  }
+                }
+                sendLocationChecks(newChecks);
+              }
+
+              // In the below loops, the entire SNES data is pulled to see if any items have already
+              // been obtained. The client must do this because it's possible for a player to begin
+              // picking up items before they connect to the server. It must then continue to do this
+              // because it's possible for a player to disconnect, pick up items, then reconnect
+
+              // Look for any checked locations in the underworld, and send those to the server if they have
+              // not been sent already. Also track the earliest unavailable data, as we will fetch it later
+              let underworldBegin = 0x129;
+              let underworldEnd = 0;
+              const underworldMissing = [];
+              for (const location of Object.values(locationsById['underworld'])) {
                 if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
-                if (((roomData << 4) & location.mask) !== 0) {
-                  newChecks.push(location.locationId);
+                underworldMissing.push(location);
+                underworldBegin = Math.min(underworldBegin, location.roomId);
+                underworldEnd = Math.max(underworldEnd, location.roomId + 1);
+              }
+              // The data originally fetched may not cover all of the underworld items, so the client needs to
+              // fetch the remaining items to see if they have been previously obtained
+              if (underworldBegin < underworldEnd) {
+                const uwResults = await readFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2);
+                const newChecks = [];
+                for (const location of underworldMissing) {
+                  const dataOffset = (location.roomId - underworldBegin) * 2;
+                  const roomData = uwResults[dataOffset] | (uwResults[dataOffset + 1] << 8);
+                  if ((roomData & location.mask) !== 0) {
+                    newChecks.push(location.locationId);
+                  }
                 }
+                // Send new checks if there are any
+                if (newChecks.length > 0) { sendLocationChecks(newChecks); }
               }
-              sendLocationChecks(newChecks);
-            }
 
-            // In the below loops, the entire SNES data is pulled to see if any items have already
-            // been obtained. The client must do this because it's possible for a player to begin
-            // picking up items before they connect to the server. It must then continue to do this
-            // because it's possible for a player to disconnect, pick up items, then reconnect
-
-            // Look for any checked locations in the underworld, and send those to the server if they have
-            // not been sent already. Also track the earliest unavailable data, as we will fetch it later
-            let underworldBegin = 0x129;
-            let underworldEnd = 0;
-            const underworldMissing = [];
-            for (const location of Object.values(locationsById['underworld'])) {
-              if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
-              underworldMissing.push(location);
-              underworldBegin = Math.min(underworldBegin, location.roomId);
-              underworldEnd = Math.max(underworldEnd, location.roomId + 1);
-            }
-            // The data originally fetched may not cover all of the underworld items, so the client needs to
-            // fetch the remaining items to see if they have been previously obtained
-            if (underworldBegin < underworldEnd) {
-              const uwResults = await readFromAddress(SAVEDATA_START + (underworldBegin * 2), (underworldEnd - underworldBegin) * 2);
-              const newChecks = [];
-              for (const location of underworldMissing) {
-                const dataOffset = (location.roomId - underworldBegin) * 2;
-                const roomData = uwResults[dataOffset] | (uwResults[dataOffset + 1] << 8);
-                if ((roomData & location.mask) !== 0) {
-                  newChecks.push(location.locationId);
+              // Look for any checked locations in the overworld, and send those to the server if they have
+              // not been sent already. Also track the earliest unavailable data, as we will fetch it later
+              let overworldBegin = 0x82;
+              let overworldEnd = 0;
+              const overworldMissing = [];
+              for (const location of Object.values(locationsById['overworld'])) {
+                if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                overworldMissing.push(location);
+                overworldBegin = Math.min(overworldBegin, location.screenId);
+                overworldEnd = Math.max(overworldEnd, location.screenId + 1);
+              }
+              // The data originally fetched may not cover all of the overworld items, so the client needs to
+              // fetch the remaining items to see if they have been previously obtained
+              if (overworldBegin < overworldEnd) {
+                const owResults = await readFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin);
+                const newChecks = [];
+                for (const location of overworldMissing) {
+                  if ((owResults[location.screenId - overworldBegin] & 0x40) !== 0) {
+                    newChecks.push(location.locationId);
+                  }
                 }
+                // Send new checks if there are any
+                if (newChecks.length > 0) { sendLocationChecks(newChecks); }
               }
-              // Send new checks if there are any
-              if (newChecks.length > 0) { sendLocationChecks(newChecks); }
-            }
 
-            // Look for any checked locations in the overworld, and send those to the server if they have
-            // not been sent already. Also track the earliest unavailable data, as we will fetch it later
-            let overworldBegin = 0x82;
-            let overworldEnd = 0;
-            const overworldMissing = [];
-            for (const location of Object.values(locationsById['overworld'])) {
-              if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
-              overworldMissing.push(location);
-              overworldBegin = Math.min(overworldBegin, location.screenId);
-              overworldEnd = Math.max(overworldEnd, location.screenId + 1);
-            }
-            // The data originally fetched may not cover all of the overworld items, so the client needs to
-            // fetch the remaining items to see if they have been previously obtained
-            if (overworldBegin < overworldEnd) {
-              const owResults = await readFromAddress(SAVEDATA_START + 0x280 + overworldBegin, overworldEnd - overworldBegin);
-              const newChecks = [];
-              for (const location of overworldMissing) {
-                if ((owResults[location.screenId - overworldBegin] & 0x40) !== 0) {
-                  newChecks.push(location.locationId);
-                }
-              }
-              // Send new checks if there are any
-              if (newChecks.length > 0) { sendLocationChecks(newChecks); }
-            }
-
-            // If all NPC locations have not been checked, pull npc data
-            let npcAllChecked = true;
-            for (const location of Object.values(locationsById['npc'])) {
-              if (checkedLocations.indexOf(location.locationId) === -1) {
-                npcAllChecked = false;
-                break;
-              }
-            }
-            if (!npcAllChecked) {
-              const npcResults = await readFromAddress(SAVEDATA_START + 0x410, 2);
-              const npcValue = npcResults[0] | (npcResults[1] << 8);
-              const newChecks = [];
+              // If all NPC locations have not been checked, pull npc data
+              let npcAllChecked = true;
               for (const location of Object.values(locationsById['npc'])) {
-                if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
-                if ((npcValue & location.screenId) !== 0) {
-                  newChecks.push(location.locationId);
+                if (checkedLocations.indexOf(location.locationId) === -1) {
+                  npcAllChecked = false;
+                  break;
                 }
               }
-              // Send new checks if there are any
-              if (newChecks.length > 0) { sendLocationChecks(newChecks); }
-            }
-
-            // If all misc locations have not been checked, pull misc data
-            let miscAllChecked = true;
-            for (const location of Object.values(locationsById['misc'])) {
-              if (checkedLocations.indexOf(location.locationId) === -1) {
-                miscAllChecked = false;
-                break;
+              if (!npcAllChecked) {
+                const npcResults = await readFromAddress(SAVEDATA_START + 0x410, 2);
+                const npcValue = npcResults[0] | (npcResults[1] << 8);
+                const newChecks = [];
+                for (const location of Object.values(locationsById['npc'])) {
+                  if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                  if ((npcValue & location.screenId) !== 0) {
+                    newChecks.push(location.locationId);
+                  }
+                }
+                // Send new checks if there are any
+                if (newChecks.length > 0) { sendLocationChecks(newChecks); }
               }
-            }
-            if (!miscAllChecked) {
-              const miscResults = await readFromAddress(SAVEDATA_START + 0x3c6, 4);
-              const newChecks = [];
+
+              // If all misc locations have not been checked, pull misc data
+              let miscAllChecked = true;
               for (const location of Object.values(locationsById['misc'])) {
-                // What the hell is this assert for? It's always true based on data from romData.js
-                // Anyway, it's preserved from the original client code, but not used here
-                // console.assert(0x3c6 <= location.roomId <= 0x3c9);
-                if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
-                if ((miscResults[location.roomId - 0x3c6] & location.mask) !== 0) {
-                  newChecks.push(location.locationId);
+                if (checkedLocations.indexOf(location.locationId) === -1) {
+                  miscAllChecked = false;
+                  break;
                 }
               }
-              // Send new checks if there are any
-              if (newChecks.length > 0) { sendLocationChecks(newChecks); }
+              if (!miscAllChecked) {
+                const miscResults = await readFromAddress(SAVEDATA_START + 0x3c6, 4);
+                const newChecks = [];
+                for (const location of Object.values(locationsById['misc'])) {
+                  // What the hell is this assert for? It's always true based on data from romData.js
+                  // Anyway, it's preserved from the original client code, but not used here
+                  // console.assert(0x3c6 <= location.roomId <= 0x3c9);
+                  if (checkedLocations.indexOf(location.locationId) > -1) { continue; }
+                  if ((miscResults[location.roomId - 0x3c6] & location.mask) !== 0) {
+                    newChecks.push(location.locationId);
+                  }
+                }
+                // Send new checks if there are any
+                if (newChecks.length > 0) { sendLocationChecks(newChecks); }
+              }
+
+              // Keep on loopin'
+              snesIntervalComplete = true;
+            } catch (err) {
+              if (err.message.search(/i\/o timeout/) > -1) {
+                new Notification('SNES Device Disconnected', {
+                  body: 'There was a problem communicating with your SNES device.',
+                });
+                appendConsoleMessage('There was a problem communicating with your SNES device. Please ensure it ' +
+                  'is powered on, the ROM is loaded, and it is connected to your computer.');
+                clearInterval(snesInterval);
+                snesIntervalComplete = true;
+                setTimeout(initializeSNIConnection, 5000);
+              }
+
+              appendConsoleMessage(err);
+              snesIntervalComplete = true;
             }
-
-            // Keep on loopin'
-            setTimeout(snesLoop);
-          };
-
-          snesLoop();
+          });
           break;
 
         case 'ConnectionRefused':
@@ -444,7 +478,12 @@ const connectToServer = (address) => {
 
     // Attempt to reconnect to the AP server
     setTimeout(() => {
-      if (++reconnectAttempts > maxReconnectAttempts) { return; }
+      if (++reconnectAttempts > maxReconnectAttempts) {
+        new Notification('Archipelago Server Connection Lost', {
+          body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
+        });
+        return;
+      }
       appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
         `(${reconnectAttempts} of ${maxReconnectAttempts})`);
       connectToServer(address);

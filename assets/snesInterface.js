@@ -5,11 +5,6 @@ window.addEventListener('load', async () => {
 
   // Handle SNES device change
   document.getElementById('snes-device').addEventListener('change', async (event) => {
-    const snesStatus = document.getElementById('snes-device-status');
-    snesStatus.innerText = 'Not Connected';
-    snesStatus.classList.remove('connected');
-    snesStatus.classList.add('disconnected');
-
     if (event.target.value === '-1') {
       if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { serverSocket.close(); }
       return;
@@ -20,10 +15,6 @@ window.addEventListener('load', async () => {
 
   // If the user presses the refresh button, reset the SNES connection entirely
   document.getElementById('snes-device-refresh').addEventListener('click', async () => {
-    const snesStatus = document.getElementById('snes-device-status');
-    snesStatus.innerText = 'Not Connected';
-    snesStatus.classList.remove('connected');
-    snesStatus.classList.add('disconnected');
     await initializeSNIConnection();
   });
 
@@ -36,15 +27,18 @@ window.addEventListener('load', async () => {
 });
 
 const initializeSNIConnection = async (requestedDevice = null) => {
+  const snesSelect = document.getElementById('snes-device');
+  snesSelect.setAttribute('disabled', '1');
+
+  // Fetch available devices from SNI
   deviceList = await window.sni.fetchDevices();
 
   // Clear the current device list
-  const snesSelect = document.getElementById('snes-device');
   while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
 
   // Add a "Select a device..." option
   const neutralOption = document.createElement('option');
-  neutralOption.innerText = 'Select a device...';
+  neutralOption.innerText = deviceList.length > 0 ? 'Select a device...' : 'Waiting for devices...';
   neutralOption.setAttribute('value', '-1');
   snesSelect.appendChild(neutralOption);
 
@@ -57,8 +51,15 @@ const initializeSNIConnection = async (requestedDevice = null) => {
     snesSelect.appendChild(deviceOption);
   }
 
-  // Enable the select list
-  snesSelect.removeAttribute('disabled');
+  // Enable the select list if there are devices available
+  if (deviceList.length > 0) {
+    snesSelect.removeAttribute('disabled');
+  }
+
+  // If no snes device is found, check for one every five seconds until one is found
+  if (deviceList.length === 0 ) {
+    return setTimeout(initializeSNIConnection, 5000);
+  }
 
   // If the user requested a specific device, attach to it
   if (requestedDevice) {
@@ -78,10 +79,6 @@ const initializeSNIConnection = async (requestedDevice = null) => {
  */
 const setSnesDevice = async (device) => {
   await window.sni.setDevice(deviceList[device]);
-  const snesStatus = document.getElementById('snes-device-status');
-  snesStatus.innerText = 'Connected';
-  snesStatus.classList.remove('disconnected');
-  snesStatus.classList.add('connected');
   window.ipc.send('requestSharedData');
 }
 
