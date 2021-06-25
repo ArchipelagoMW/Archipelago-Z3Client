@@ -494,15 +494,6 @@ const connectToServer = (address) => {
     if (snesDevice === null) { return; }
 
     setTimeout(() => {
-      if (++reconnectAttempts > maxReconnectAttempts) {
-        new Notification('Archipelago Server Connection Lost', {
-          body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
-        });
-        return;
-      }
-      appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
-        `(${reconnectAttempts} of ${maxReconnectAttempts})`);
-
       // Do not attempt to reconnect if a server connection exists already. This can happen if a user attempts
       // to connect to a new server after connecting to a previous one
       if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { return; }
@@ -510,6 +501,16 @@ const connectToServer = (address) => {
       // If the socket was closed in response to an auth error, do not reconnect
       if (serverAuthError) { return }
 
+      // Do not exceed the limit of reconnection attempts
+      if (++reconnectAttempts > maxReconnectAttempts) {
+        new Notification('Archipelago Server Connection Lost', {
+          body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
+        });
+        return;
+      }
+
+      appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
+        `(${reconnectAttempts} of ${maxReconnectAttempts})`);
       connectToServer(address);
     }, 5000);
   };
