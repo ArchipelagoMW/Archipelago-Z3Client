@@ -173,14 +173,14 @@ const connectToServer = (address) => {
               // This fetch includes data about the room the player is currently inside of
               const receivedItems = await readFromAddress(RECEIVED_ITEMS_INDEX, 0x08);
               const romItemsReceived = receivedItems[0] | (receivedItems[1] << 8);
-              const linkHoldingUpItem = receivedItems[2];
+              const linkIsBusy = receivedItems[2];
               const roomId = receivedItems[4] | (receivedItems[5] << 8);
               const roomData = receivedItems[6];
               const scoutLocation = receivedItems[7];
 
-              // If there are still items needing to be sent, and Link is not in the middle of
-              // receiving something, send the item to the SNES
-              if (receiveItems && (romItemsReceived < itemsReceived.length) && !linkHoldingUpItem) {
+              // If there are still items needing to be sent, and Link is able to receive an item,
+              // send the item to the SNES
+              if (receiveItems && (romItemsReceived < itemsReceived.length) && !linkIsBusy) {
                 // Increment the counter of items sent to the ROM
                 const indexData = new Uint8Array(2);
                 indexData.set([
@@ -197,7 +197,6 @@ const connectToServer = (address) => {
                 // Tell the SNES the id of the player who sent the item
                 const senderData = new Uint8Array(1);
                 senderData.set([
-                  // TODO: This sends the wrong player ID. Probably an off-by-one error.
                   (playerSlot === itemsReceived[romItemsReceived].player) ? 0 : itemsReceived[romItemsReceived].player
                 ]);
                 await writeToAddress(RECEIVED_ITEM_SENDER_ADDRESS, senderData);
@@ -446,7 +445,7 @@ const connectToServer = (address) => {
           if (command.hasOwnProperty('hint_cost')) {
             hintCost = Number(command.hint_cost);
             document.getElementById('hint-cost').innerText =
-              (Math.round((hintCost / 100) * (checkedLocations.length + missingLocations.length))).toString();
+              (Math.floor((hintCost / 100) * (checkedLocations.length + missingLocations.length))).toString();
           }
 
           if (command.hasOwnProperty('location_check_points')) {

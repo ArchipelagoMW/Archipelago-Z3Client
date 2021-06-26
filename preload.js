@@ -22,3 +22,8 @@ contextBridge.exposeInMainWorld('sni', {
   readFromAddress: (address, length) => ipcRenderer.invoke('readFromAddress', [address, length]),
   writeToAddress: (address, data) => ipcRenderer.invoke('writeToAddress', [address, data]),
 });
+
+// Used for logging
+contextBridge.exposeInMainWorld('logging', {
+  writeToLog: (data) => ipcRenderer.invoke('writeToLog', data),
+});

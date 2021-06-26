@@ -72,7 +72,7 @@ const createWindow = () => {
 
 app.whenReady().then(async () => {
   // Create the local config file if it does not exist
-  const configPath = path.join(process.env.APPDATA, 'ap-lttp.config.json');
+  const configPath = path.join(process.env.APPDATA, 'z3client.config.json');
   if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath,JSON.stringify({}));
   }
@@ -153,7 +153,7 @@ ipcMain.on('requestSharedData', (event, args) => {
 });
 ipcMain.on('setLauncher', (event, args) => {
   // Allow the user to specify a program to launch the ROM
-  const configPath = path.join(process.env.APPDATA, 'ap-lttp.config.json');
+  const configPath = path.join(process.env.APPDATA, 'z3client.config.json');
   const config = JSON.parse(fs.readFileSync(configPath).toString());
   const launcherPath = dialog.showOpenDialogSync({
     title: 'Locate ROM Launcher',
@@ -176,3 +176,11 @@ ipcMain.handle('fetchDevices', sni.fetchDevices);
 ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
 ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
 ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
+
+// Interprocess communication with the renderer process, used for logging
+if (!fs.existsSync(path.join(process.env.APPDATA, 'z3client-logs'))) {
+  fs.mkdirSync(path.join(process.env.APPDATA, 'z3client-logs'));
+}
+const logFile = fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
+ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}`));
