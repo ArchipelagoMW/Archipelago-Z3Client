@@ -404,9 +404,10 @@ const connectToServer = (address) => {
         case 'ReceivedItems':
           // Save received items in the array of items to be sent to the SNES, if they have not been sent already
           command.items.forEach((item) => {
-            if (checkedLocations.indexOf(item.location) === -1) {
-              itemsReceived.push(item);
-            }
+            if (itemsReceived.find((ir) =>
+              ir.item === item.item && ir.location === item.location && ir.player === item.player
+            )) { return; }
+            itemsReceived.push(item);
           });
           break;
 
