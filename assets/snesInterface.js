@@ -101,8 +101,8 @@ const readFromAddress = (hexOffset, byteCountInHex) => new Promise(async (resolv
     .then(async (result) => {
       resolve(result);
     })
-    .catch((err) => {
-      console.error(err);
+    .catch(async (err) => {
+      await window.logging.writeToLog(JSON.stringify(err));
       reject(err)
     });
 });
@@ -151,5 +151,8 @@ const writeToAddress = (hexOffset, data) => new Promise((resolve, reject) => {
   // Most emulators (snes9x, RetroArch, BizHawk, BSNES, etc.) will allow you to write directly to WRAM
   window.sni.writeToAddress(hexOffset, data)
     .then((result) => resolve(result))
-    .catch((err) => reject(err));
+    .catch(async (err) => {
+      await window.logging.writeToLog(JSON.stringify(err));
+      reject(err);
+    });
 });

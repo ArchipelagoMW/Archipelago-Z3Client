@@ -367,10 +367,8 @@ const connectToServer = (address) => {
               // Keep on loopin'
               snesIntervalComplete = true;
             } catch (err) {
-              // Notify the user that the SNES device is no longer available
-              new Notification('SNES Device Disconnected', {
-                body: 'There was a problem communicating with your SNES device.',
-              });
+              await window.logging.writeToLog(err.message);
+
               appendConsoleMessage('There was a problem communicating with your SNES device. Please ensure it ' +
                 'is powered on, the ROM is loaded, and it is connected to your computer.');
 
@@ -509,9 +507,8 @@ const connectToServer = (address) => {
 
       // Do not exceed the limit of reconnection attempts
       if (++reconnectAttempts > maxReconnectAttempts) {
-        new Notification('Archipelago Server Connection Lost', {
-          body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
-        });
+        appendConsoleMessage('Archipelago server connection lost. The connection closed unexpectedly. ' +
+          'Please try to reconnect, or restart the client.');
         return;
       }
 
@@ -523,9 +520,8 @@ const connectToServer = (address) => {
 
   serverSocket.onerror = (event) => {
     if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
-      new Notification('Archipelago Server Connection Lost', {
-        body: 'The connection closed unexpectedly. Please try to reconnect, or restart the client.',
-      });
+      appendConsoleMessage('Archipelago server connection lost. The connection closed unexpectedly. ' +
+        'Please try to reconnect, or restart the client.');
       serverSocket.close();
     }
   };
