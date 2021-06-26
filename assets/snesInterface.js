@@ -98,12 +98,12 @@ const setSnesDevice = async (device) => {
  */
 const readFromAddress = (hexOffset, byteCountInHex) => new Promise(async (resolve, reject) => {
   window.sni.readFromAddress(hexOffset, byteCountInHex)
-    .then(async (result) => {
+    .then((result) => {
       resolve(result);
     })
     .catch(async (err) => {
       await window.logging.writeToLog(JSON.stringify(err));
-      reject(err)
+      reject(err);
     });
 });
 
