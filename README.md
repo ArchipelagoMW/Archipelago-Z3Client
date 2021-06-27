@@ -8,5 +8,6 @@ I am writing this using the latest version of Node.js (currently v16.3.0), but y
 git clone https://github.com/LegendaryLinux/Archipelago-Z3Client
 cd Archipelago-Z3Client
 npm install
+electron-rebuild
 electron .
 ```
