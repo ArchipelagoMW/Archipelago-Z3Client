@@ -157,16 +157,17 @@ const connectToServer = (address) => {
               }
 
               // Fetch game state and triforce information
-              const gameOver = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
-              if (gameOver[0] || ENDGAME_MODES.indexOf(modeValue) > -1) {
-                // If the game has ended or the payer has acquired the triforce, stop interacting with the SNES
+              const gameOverScreenDisplayed = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
+              if (gameOverScreenDisplayed[0] || ENDGAME_MODES.indexOf(modeValue) > -1) {
+                // If the game over screen is displayed, do not send or receive items
                 if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
                   serverSocket.send(JSON.stringify([{
                     cmd: 'StatusUpdate',
                     status: CLIENT_STATUS.CLIENT_GOAL,
                   }]));
                 }
-                return clearInterval(snesInterval);
+                snesIntervalComplete = true;
+                return;
               }
 
               // Fetch information from the SNES about items it has received, and compare that against local data.
