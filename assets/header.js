@@ -27,23 +27,27 @@ window.addEventListener('load', () => {
   });
 
   // Allow the user to press a button to pause receiving items (a.k.a. Malmo Mode)
-  document.getElementById('receive-items').addEventListener('click', (evt) => {
+  document.getElementById('receive-items-toggle').addEventListener('click', (evt) => {
     receiveItems ? disableReceivingItems() : enableReceivingItems();
   });
 });
 
 const disableReceivingItems = () => {
-  const receiveItemsButton = document.getElementById('receive-items');
+  const receiveItemsStatus = document.getElementById('receive-items-status');
   receiveItems = false;
-  receiveItemsButton.innerText = 'Enable';
+  receiveItemsStatus.innerText = 'Disabled';
+  receiveItemsStatus.classList.remove('enabled');
+  receiveItemsStatus.classList.add('disabled');
   appendConsoleMessage('You are no longer receiving items from other players. Items found in your ' +
     ' world will still be sent.');
 };
 
 const enableReceivingItems = () => {
-  const receiveItemsButton = document.getElementById('receive-items');
+  const receiveItemsStatus = document.getElementById('receive-items-status');
   receiveItems = true;
-  receiveItemsButton.innerText = 'Disable';
+  receiveItemsStatus.innerText = 'Enabled';
+  receiveItemsStatus.classList.remove('disabled');
+  receiveItemsStatus.classList.add('enabled');
   appendConsoleMessage('You are now receiving items from other players.');
 };
 
