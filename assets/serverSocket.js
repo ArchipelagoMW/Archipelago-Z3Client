@@ -53,9 +53,12 @@ const connectToServer = (address) => {
   // If there are no SNES devices available, do nothing
   if (snesDevice === null) { return; }
 
-  // Attempt to connect to the server
-  const serverAddress = (address.search(/.*:\d+/) > -1) ? address : `${address}:${DEFAULT_SERVER_PORT}`;
+  // Determine the server address
+  let serverAddress = address;
+  if (serverAddress.search(/^\/connect /) > -1) { serverAddress = serverAddress.substring(9); }
+  if (serverAddress.search(/:\d+$/) === -1) { serverAddress = `${serverAddress}:${DEFAULT_SERVER_PORT}`;}
 
+  // Attempt to connect to the server
   serverSocket = new WebSocket(`ws://${serverAddress}`);
   serverSocket.onopen = (event) => {};
 
