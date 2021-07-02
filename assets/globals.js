@@ -50,3 +50,7 @@ let sharedData = {};
 
 // The user has the option to pause receiving items
 let receiveItems = true;
+
+// For those who hate shields
+const shieldNames = ['Blue Shield', 'Red Shield', 'Mirror Shield', 'Progressive Shield'];
+let receiveShields = true;

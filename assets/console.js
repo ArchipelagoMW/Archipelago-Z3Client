@@ -61,6 +61,11 @@ window.addEventListener('load', () => {
           setFontSize(parseInt(commandParts[1]));
           break;
 
+        case '/shield':
+        case '/farrak': // A little something just for me
+          receiveShields ? disableReceivingShields() : enableReceivingShields();
+          break;
+
         case '/pause':
         case '/malmo': // For the memes
           receiveItems ? disableReceivingItems() : enableReceivingItems();
@@ -153,4 +158,16 @@ const cacheCommand = (command) => {
 
   // Store the command
   cachedCommands.push(command);
+};
+
+// Allow yourself to receive shields. Why would you do this?
+enableReceivingShields = () => {
+  appendConsoleMessage('You are now able to receive shields.');
+  receiveShields = true;
+};
+
+// Disable receiving shields, like a true gamer
+disableReceivingShields = () => {
+  appendConsoleMessage('You will no longer receive shields.');
+  receiveShields = false;
 };

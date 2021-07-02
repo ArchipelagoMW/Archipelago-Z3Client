@@ -193,9 +193,18 @@ const connectToServer = (address) => {
                 ]);
                 await writeToAddress(RECEIVED_ITEMS_INDEX, indexData);
 
+                // If the user does not want to receive shields, send a Nothing item to the SNES instead
+                let itemCode = itemsReceived[romItemsReceived].item;
+                if (!receiveShields && shieldNames.indexOf(itemsById[itemsReceived[romItemsReceived].item]) > -1) {
+                  const offendingPlayer = players.find((p) => itemsReceived[romItemsReceived].player === p.slot);
+                  appendConsoleMessage(`${offendingPlayer ? offendingPlayer.alias : 'Someone'} tried to send you ` +
+                    `a shield, but they were denied!`);
+                  itemCode = 0x5A; // "Nothing" item
+                }
+
                 // Send the item to the SNES
                 const itemData = new Uint8Array(1);
-                itemData.set([itemsReceived[romItemsReceived].item])
+                itemData.set([itemCode])
                 await writeToAddress(RECEIVED_ITEM_ADDRESS, itemData);
 
                 // Tell the SNES the id of the player who sent the item
