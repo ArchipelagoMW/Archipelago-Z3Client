@@ -17,6 +17,7 @@ contextBridge.exposeInMainWorld('ipc', {
 
 // Used for SNI operations only, these are synchronous requests
 contextBridge.exposeInMainWorld('sni', {
+  launchSNI: () => ipcRenderer.invoke('launchSNI'),
   fetchDevices: () => ipcRenderer.invoke('fetchDevices'),
   setDevice: (device) => ipcRenderer.invoke('setDevice', device),
   readFromAddress: (address, length) => ipcRenderer.invoke('readFromAddress', [address, length]),

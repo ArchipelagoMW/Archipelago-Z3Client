@@ -35,6 +35,7 @@ const initializeSNIConnection = async (requestedDevice = null) => {
   snesSelect.setAttribute('disabled', '1');
 
   // Fetch available devices from SNI
+  await window.sni.launchSNI();
   deviceList = await window.sni.fetchDevices();
 
   // Clear the current device list

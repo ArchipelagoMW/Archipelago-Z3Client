@@ -7,6 +7,16 @@ const bsdiff = require('bsdiff-node');
 const childProcess = require('child_process');
 const SNI = require('./SNI');
 
+// Function to launch SNI if it is not running
+const launchSNI = () => {
+  const exec = require('child_process').exec;
+  exec('tasklist', (err, stdout, stderr) => {
+    if (stdout.search('sni.exe') === -1) {
+      childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
+    }
+  });
+};
+
 // Perform certain actions during the install process
 if (require('electron-squirrel-startup')) {
   if (process.platform === 'win32') {
@@ -140,12 +150,7 @@ app.whenReady().then(async () => {
 });
 
 // Launch SNI if it is not running
-const exec = require('child_process').exec;
-exec('tasklist', (err, stdout, stderr) => {
-  if (stdout.search('sni.exe') === -1) {
-    childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
-  }
-});
+launchSNI();
 
 // Interprocess communication with the renderer process, all are asynchronous events
 ipcMain.on('requestSharedData', (event, args) => {
@@ -172,6 +177,7 @@ const sni = new SNI();
 sni.setAddressSpace(SNI.supportedAddressSpaces.FXPAKPRO); // We support communicating with FXPak devices
 sni.setMemoryMap(SNI.supportedMemoryMaps.LOROM); // ALttP uses LOROM
 
+ipcMain.handle('launchSNI', launchSNI);
 ipcMain.handle('fetchDevices', sni.fetchDevices);
 ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
 ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
