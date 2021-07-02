@@ -119,7 +119,7 @@ const appendFormattedConsoleMessage = (messageParts) => {
     if (part.hasOwnProperty('type')) {
       switch(part.type){
         case 'player_id':
-          const playerIsClient = players.find((p) => parseInt(part.text, 10) === p.slot);
+          const playerIsClient = parseInt(part.text, 10) === playerSlot;
           if (playerIsClient) { span.style.fontWeight = 'bold'; }
           span.style.color = playerIsClient ? '#ffa565' : '#52b44c';
           span.innerText = players[parseInt(part.text, 10) - 1].alias;
