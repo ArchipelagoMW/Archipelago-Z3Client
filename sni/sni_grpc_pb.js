@@ -4,6 +4,28 @@
 var grpc = require('@grpc/grpc-js');
 var sni_pb = require('./sni_pb.js');
 
+function serialize_BootFileRequest(arg) {
+  if (!(arg instanceof sni_pb.BootFileRequest)) {
+    throw new Error('Expected argument of type BootFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_BootFileRequest(buffer_arg) {
+  return sni_pb.BootFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_BootFileResponse(arg) {
+  if (!(arg instanceof sni_pb.BootFileResponse)) {
+    throw new Error('Expected argument of type BootFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_BootFileResponse(buffer_arg) {
+  return sni_pb.BootFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_DetectMemoryMappingRequest(arg) {
   if (!(arg instanceof sni_pb.DetectMemoryMappingRequest)) {
     throw new Error('Expected argument of type DetectMemoryMappingRequest');
@@ -46,6 +68,50 @@ function serialize_DevicesResponse(arg) {
 
 function deserialize_DevicesResponse(buffer_arg) {
   return sni_pb.DevicesResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_GetFileRequest(arg) {
+  if (!(arg instanceof sni_pb.GetFileRequest)) {
+    throw new Error('Expected argument of type GetFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_GetFileRequest(buffer_arg) {
+  return sni_pb.GetFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_GetFileResponse(arg) {
+  if (!(arg instanceof sni_pb.GetFileResponse)) {
+    throw new Error('Expected argument of type GetFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_GetFileResponse(buffer_arg) {
+  return sni_pb.GetFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_MakeDirectoryRequest(arg) {
+  if (!(arg instanceof sni_pb.MakeDirectoryRequest)) {
+    throw new Error('Expected argument of type MakeDirectoryRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_MakeDirectoryRequest(buffer_arg) {
+  return sni_pb.MakeDirectoryRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_MakeDirectoryResponse(arg) {
+  if (!(arg instanceof sni_pb.MakeDirectoryResponse)) {
+    throw new Error('Expected argument of type MakeDirectoryResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_MakeDirectoryResponse(buffer_arg) {
+  return sni_pb.MakeDirectoryResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_MultiReadMemoryRequest(arg) {
@@ -134,6 +200,94 @@ function serialize_PauseToggleEmulationResponse(arg) {
 
 function deserialize_PauseToggleEmulationResponse(buffer_arg) {
   return sni_pb.PauseToggleEmulationResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_PutFileRequest(arg) {
+  if (!(arg instanceof sni_pb.PutFileRequest)) {
+    throw new Error('Expected argument of type PutFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_PutFileRequest(buffer_arg) {
+  return sni_pb.PutFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_PutFileResponse(arg) {
+  if (!(arg instanceof sni_pb.PutFileResponse)) {
+    throw new Error('Expected argument of type PutFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_PutFileResponse(buffer_arg) {
+  return sni_pb.PutFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_ReadDirectoryRequest(arg) {
+  if (!(arg instanceof sni_pb.ReadDirectoryRequest)) {
+    throw new Error('Expected argument of type ReadDirectoryRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_ReadDirectoryRequest(buffer_arg) {
+  return sni_pb.ReadDirectoryRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_ReadDirectoryResponse(arg) {
+  if (!(arg instanceof sni_pb.ReadDirectoryResponse)) {
+    throw new Error('Expected argument of type ReadDirectoryResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_ReadDirectoryResponse(buffer_arg) {
+  return sni_pb.ReadDirectoryResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_RemoveFileRequest(arg) {
+  if (!(arg instanceof sni_pb.RemoveFileRequest)) {
+    throw new Error('Expected argument of type RemoveFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_RemoveFileRequest(buffer_arg) {
+  return sni_pb.RemoveFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_RemoveFileResponse(arg) {
+  if (!(arg instanceof sni_pb.RemoveFileResponse)) {
+    throw new Error('Expected argument of type RemoveFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_RemoveFileResponse(buffer_arg) {
+  return sni_pb.RemoveFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_RenameFileRequest(arg) {
+  if (!(arg instanceof sni_pb.RenameFileRequest)) {
+    throw new Error('Expected argument of type RenameFileRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_RenameFileRequest(buffer_arg) {
+  return sni_pb.RenameFileRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_RenameFileResponse(arg) {
+  if (!(arg instanceof sni_pb.RenameFileResponse)) {
+    throw new Error('Expected argument of type RenameFileResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_RenameFileResponse(buffer_arg) {
+  return sni_pb.RenameFileResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
 function serialize_ResetSystemRequest(arg) {
@@ -351,3 +505,84 @@ streamWrite: {
 };
 
 exports.DeviceMemoryClient = grpc.makeGenericClientConstructor(DeviceMemoryService);
+var DeviceFilesystemService = exports.DeviceFilesystemService = {
+  readDirectory: {
+    path: '/DeviceFilesystem/ReadDirectory',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.ReadDirectoryRequest,
+    responseType: sni_pb.ReadDirectoryResponse,
+    requestSerialize: serialize_ReadDirectoryRequest,
+    requestDeserialize: deserialize_ReadDirectoryRequest,
+    responseSerialize: serialize_ReadDirectoryResponse,
+    responseDeserialize: deserialize_ReadDirectoryResponse,
+  },
+  makeDirectory: {
+    path: '/DeviceFilesystem/MakeDirectory',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.MakeDirectoryRequest,
+    responseType: sni_pb.MakeDirectoryResponse,
+    requestSerialize: serialize_MakeDirectoryRequest,
+    requestDeserialize: deserialize_MakeDirectoryRequest,
+    responseSerialize: serialize_MakeDirectoryResponse,
+    responseDeserialize: deserialize_MakeDirectoryResponse,
+  },
+  removeFile: {
+    path: '/DeviceFilesystem/RemoveFile',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.RemoveFileRequest,
+    responseType: sni_pb.RemoveFileResponse,
+    requestSerialize: serialize_RemoveFileRequest,
+    requestDeserialize: deserialize_RemoveFileRequest,
+    responseSerialize: serialize_RemoveFileResponse,
+    responseDeserialize: deserialize_RemoveFileResponse,
+  },
+  renameFile: {
+    path: '/DeviceFilesystem/RenameFile',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.RenameFileRequest,
+    responseType: sni_pb.RenameFileResponse,
+    requestSerialize: serialize_RenameFileRequest,
+    requestDeserialize: deserialize_RenameFileRequest,
+    responseSerialize: serialize_RenameFileResponse,
+    responseDeserialize: deserialize_RenameFileResponse,
+  },
+  putFile: {
+    path: '/DeviceFilesystem/PutFile',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.PutFileRequest,
+    responseType: sni_pb.PutFileResponse,
+    requestSerialize: serialize_PutFileRequest,
+    requestDeserialize: deserialize_PutFileRequest,
+    responseSerialize: serialize_PutFileResponse,
+    responseDeserialize: deserialize_PutFileResponse,
+  },
+  getFile: {
+    path: '/DeviceFilesystem/GetFile',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.GetFileRequest,
+    responseType: sni_pb.GetFileResponse,
+    requestSerialize: serialize_GetFileRequest,
+    requestDeserialize: deserialize_GetFileRequest,
+    responseSerialize: serialize_GetFileResponse,
+    responseDeserialize: deserialize_GetFileResponse,
+  },
+  bootFile: {
+    path: '/DeviceFilesystem/BootFile',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.BootFileRequest,
+    responseType: sni_pb.BootFileResponse,
+    requestSerialize: serialize_BootFileRequest,
+    requestDeserialize: deserialize_BootFileRequest,
+    responseSerialize: serialize_BootFileResponse,
+    responseDeserialize: deserialize_BootFileResponse,
+  },
+};
+
+exports.DeviceFilesystemClient = grpc.makeGenericClientConstructor(DeviceFilesystemService);
