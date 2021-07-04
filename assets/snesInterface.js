@@ -25,6 +25,7 @@ window.addEventListener('load', async () => {
   window.ipc.receive('sharedData', (data) => {
     sharedData = data;
     if (sharedData.hasOwnProperty('apServerAddress')) {
+      document.getElementById('server-address').value = sharedData.apServerAddress;
       connectToServer(sharedData.apServerAddress);
     }
   });
