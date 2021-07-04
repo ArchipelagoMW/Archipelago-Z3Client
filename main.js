@@ -116,7 +116,7 @@ app.whenReady().then(async () => {
           `${path.basename(arg).substr(0, path.basename(arg).length - 5)}.sfc`);
         const apbpBuffer = await lzma.decompress(fs.readFileSync(arg));
         const apbp = yaml.load(apbpBuffer);
-        sharedData.apServerAddress = apbp.meta.server | null;
+        sharedData.apServerAddress = apbp.meta.server ? apbp.meta.server : null;
         fs.writeFileSync(patchFilePath, apbp.patch);
         await bsdiff.patch(config.baseRomPath, romFilePath, patchFilePath);
         fs.rmSync(patchFilePath);
