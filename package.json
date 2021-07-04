@@ -25,6 +25,7 @@
     "google-protobuf": "^3.17.3",
     "js-yaml": "^4.1.0",
     "lzma-native": "^8.0.1",
+    "md5": "^2.3.0",
     "path": "^0.12.7",
     "winreg": "^1.2.4"
   },

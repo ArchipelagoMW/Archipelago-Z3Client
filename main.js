@@ -5,6 +5,7 @@ const lzma = require('lzma-native');
 const yaml = require('js-yaml');
 const bsdiff = require('bsdiff-node');
 const childProcess = require('child_process');
+const md5 = require('md5');
 const SNI = require('./SNI');
 
 // Function to launch SNI if it is not running
@@ -89,9 +90,14 @@ app.whenReady().then(async () => {
 
   // Load the config into memory
   const config = JSON.parse(fs.readFileSync(configPath).toString());
+  const baseRomHash = '03a63945398191337e896e5771f77173';
 
-  // Prompt for base rom file if not present in config or if missing from disk
-  if (!config.hasOwnProperty('baseRomPath') || !fs.existsSync(config.baseRomPath)) {
+  // Prompt for base rom file if not present in config, missing from disk, or the hash fails
+  if (
+    !config.hasOwnProperty('baseRomPath') || // Base ROM has not been specified in the past
+    !fs.existsSync(config.baseRomPath) || // Base ROM no longer exists
+    md5(fs.readFileSync(config.baseRomPath)) !== baseRomHash // The base ROM hash is wrong (user chose the wrong file)
+  ) {
     let baseRomPath = dialog.showOpenDialogSync(null, {
       title: 'Select base ROM',
       buttonLabel: 'Choose ROM',
@@ -110,6 +116,15 @@ app.whenReady().then(async () => {
   for (const arg of process.argv) {
     if (arg.substr(-5).toLowerCase() === '.apbp') {
       if (config.hasOwnProperty('baseRomPath') && fs.existsSync(config.baseRomPath)) {
+        if (md5(fs.readFileSync(config.baseRomPath)) !== baseRomHash) {
+          dialog.showMessageBoxSync({
+            type: 'info',
+            title: 'Invalid Base ROM',
+            message: 'The ROM file for your game could not be created because the base ROM is invalid.',
+          });
+          break;
+        }
+
         if (!fs.existsSync(arg)) { break; }
         const patchFilePath = path.join(__dirname, 'patch.bsdiff');
         const romFilePath = path.join(path.dirname(arg),
