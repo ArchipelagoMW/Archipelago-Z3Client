@@ -1,6 +1,6 @@
 {
   "name": "archipelago-z3client",
-  "version": "0.11.1",
+  "version": "0.11.2",
   "author": "Chris Wilson",
   "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
   "license": "MIT",
@@ -27,7 +27,8 @@
     "lzma-native": "^8.0.1",
     "md5": "^2.3.0",
     "path": "^0.12.7",
-    "winreg": "^1.2.4"
+    "winreg": "^1.2.4",
+    "ws": "^7.5.2"
   },
   "devDependencies": {
     "@electron-forge/cli": "^6.0.0-beta.57",
