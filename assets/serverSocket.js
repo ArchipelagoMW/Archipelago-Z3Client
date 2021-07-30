@@ -60,7 +60,12 @@ const connectToServer = (address) => {
 
   // Attempt to connect to the server
   serverSocket = new WebSocket(`ws://${serverAddress}`);
-  serverSocket.onopen = (event) => {};
+  serverSocket.onopen = (event) => {
+    // If a new server connection is established, that server will inform the client which items have been sent to
+    // the ROM so far, if any. Clear the client's current list of received items to prevent the old list from
+    // contaminating the new one, sometimes called "seed bleed".
+    itemsReceived = [];
+  };
 
   // Handle incoming messages
   serverSocket.onmessage = async (event) => {
@@ -118,6 +123,10 @@ const connectToServer = (address) => {
           // Store the reported location check data from the server. They are arrays of locationIds
           checkedLocations = command.checked_locations;
           missingLocations = command.missing_locations;
+
+          // In case the user replaced the ROM without disconnecting from the AP Server or SNI, treat every new
+          // 'Connected' message as if it means a new ROM was discovered
+          itemsReceived = [];
 
           // Set the hint cost text
           document.getElementById('hint-cost').innerText =
