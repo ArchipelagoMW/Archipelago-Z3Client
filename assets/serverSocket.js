@@ -16,6 +16,7 @@ let missingLocations = [];
 // Data about remote items
 const scoutedLocations = {};
 
+let gameCompleted = false;
 const CLIENT_STATUS = {
   CLIENT_UNKNOWN: 0,
   CLIENT_READY: 10,
@@ -170,13 +171,18 @@ const connectToServer = (address) => {
 
               // Fetch game state and triforce information
               const gameOverScreenDisplayed = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
+              // If the game over screen is displayed, do not send or receive items
               if (gameOverScreenDisplayed[0] || ENDGAME_MODES.indexOf(modeValue) > -1) {
-                // If the game over screen is displayed, do not send or receive items
-                if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                // If this is the first time the game over screen is displayed, inform the server
+                // the game is complete.
+                if (serverSocket && serverSocket.readyState === WebSocket.OPEN && !gameCompleted) {
                   serverSocket.send(JSON.stringify([{
                     cmd: 'StatusUpdate',
                     status: CLIENT_STATUS.CLIENT_GOAL,
                   }]));
+
+                  // Flag game as completed
+                  gameCompleted = true;
                 }
                 snesIntervalComplete = true;
                 return;
