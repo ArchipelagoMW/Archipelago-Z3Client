@@ -85,15 +85,13 @@ const connectToServer = (address) => {
           hintCost = Number(command.hint_cost);
           document.getElementById('points-per-check').innerText = command.location_check_points.toString();
 
-          // Update the local cache of location and item maps if necessary
-          if (!localStorage.getItem('dataPackageVersion') || !localStorage.getItem('locationMap') ||
-            !localStorage.getItem('itemMap') ||
+          // Update the local data package cache if necessary
+          if (!localStorage.getItem('dataPackageVersion') || !localStorage.getItem('dataPackage') ||
             command.datapackage_version !== localStorage.getItem('dataPackageVersion')) {
-            updateLocationCache();
+            requestDataPackage();
           } else {
             // Load the location and item maps into memory
-            buildLocationData(JSON.parse(localStorage.getItem('locationMap')));
-            itemsById = JSON.parse(localStorage.getItem('itemMap'));
+            buildItemAndLocationData(JSON.parse(localStorage.getItem('dataPackage')));
           }
 
           // Authenticate with the server
@@ -496,16 +494,12 @@ const connectToServer = (address) => {
           break;
 
         case 'DataPackage':
-          // Save updated location and item maps into localStorage
+          // Save updated data package into localStorage
           if (command.data.version !== 0) { // Unless this is a custom package, denoted by version zero
             localStorage.setItem('dataPackageVersion', command.data.version);
-            localStorage.setItem('locationMap', JSON.stringify(command.data.lookup_any_location_id_to_name));
-            localStorage.setItem('itemMap', JSON.stringify(command.data.lookup_any_item_id_to_name));
+            localStorage.setItem('dataPackage', JSON.stringify(command.data));
           }
-
-          buildLocationData(command.data.lookup_any_location_id_to_name);
-          itemsById = command.data.lookup_any_item_id_to_name;
-
+          buildItemAndLocationData(command.data);
           break;
 
         default:
@@ -582,7 +576,7 @@ const serverSync = () => {
   }
 };
 
-const updateLocationCache = () => {
+const requestDataPackage = () => {
   if (!serverSocket || serverSocket.readyState !== WebSocket.OPEN) { return; }
   serverSocket.send(JSON.stringify([{
     cmd: 'GetDataPackage',
@@ -595,6 +589,22 @@ const sendLocationChecks = (locationIds) => {
     cmd: 'LocationChecks',
     locations: locationIds,
   }]));
+};
+
+// TODO: Build me!
+const buildItemAndLocationData = (dataPackage) => {
+  itemsById = {};
+  const locationMap = {};
+  Object.keys(dataPackage.games).forEach((gameName) => {
+    Object.keys(dataPackage.games[gameName].item_name_to_id).forEach((itemName) => {
+      itemsById[dataPackage.games[gameName].item_name_to_id[itemName]] = itemName;
+    });
+
+    Object.keys(dataPackage.games[gameName].location_name_to_id).forEach((locationName) => {
+      locationMap[dataPackage.games[gameName].location_name_to_id[locationName]] = locationName;
+    });
+  });
+  buildLocationData(locationMap);
 };
 
 /**

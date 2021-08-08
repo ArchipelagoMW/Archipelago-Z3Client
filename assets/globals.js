@@ -2,14 +2,14 @@
 const CLIENT_VERSION = {
   state: 'Beta',
   major: 0,
-  minor: 11,
-  patch: 6,
+  minor: 12,
+  patch: 0,
 };
 
 const SUPPORTED_ARCHIPELAGO_VERSION = {
   major: 0,
   minor: 1,
-  build: 4,
+  build: 5,
   class: 'Version',
 };
 

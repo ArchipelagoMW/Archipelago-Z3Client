@@ -1,6 +1,6 @@
 {
   "name": "archipelago-z3client",
-  "version": "0.11.6",
+  "version": "0.12.0",
   "author": "Chris Wilson",
   "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
   "license": "MIT",
