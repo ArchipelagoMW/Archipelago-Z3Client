@@ -10,12 +10,20 @@ const SNI = require('./SNI');
 
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
-  const logFile = fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+  const logFile = createLogFile();
   fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
 });
 
+// Function to create a log file
+const createLogFile = () => {
+  if (!fs.existsSync(path.join(process.env.APPDATA, 'z3client-logs'))) {
+    fs.mkdirSync(path.join(process.env.APPDATA, 'z3client-logs'));
+  }
+  return fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+}
+
 // Create log file for this run
-const logFile = fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+const logFile = createLogFile();
 
 // Function to launch SNI if it is not running
 const launchSNI = () => {
@@ -209,11 +217,6 @@ ipcMain.handle('fetchDevices', sni.fetchDevices);
 ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
 ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
 ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
-
-// Interprocess communication with the renderer process, used for logging
-if (!fs.existsSync(path.join(process.env.APPDATA, 'z3client-logs'))) {
-  fs.mkdirSync(path.join(process.env.APPDATA, 'z3client-logs'));
-}
 
 fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
 ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
