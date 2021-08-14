@@ -8,6 +8,14 @@ const childProcess = require('child_process');
 const md5 = require('md5');
 const SNI = require('./SNI');
 
+// Create log file for this run
+const logFile = fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+
+// Catch and log any uncaught errors that occur in the main process
+process.on('uncaughtException', (error) => {
+  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
+});
+
 // Function to launch SNI if it is not running
 const launchSNI = () => {
   const exec = require('child_process').exec;
@@ -162,6 +170,9 @@ app.whenReady().then(async () => {
       app.quit();
     }
   });
+}).catch((error) => {
+  // Write error to log
+  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
 });
 
 // Launch SNI if it is not running
@@ -202,6 +213,6 @@ ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, 
 if (!fs.existsSync(path.join(process.env.APPDATA, 'z3client-logs'))) {
   fs.mkdirSync(path.join(process.env.APPDATA, 'z3client-logs'));
 }
-const logFile = fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+
 fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
-ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}`));
+ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
