@@ -8,6 +8,7 @@ let reconnectAttempts = 0;
 let snesInterval = null;
 let snesIntervalComplete = true;
 let reconnectInterval = null;
+let lastBounce = 0;
 
 // Location Ids provided by the server
 let checkedLocations = [];
@@ -157,6 +158,19 @@ const connectToServer = (address) => {
 
               // The SNES interval is now in progress, don't start another one
               snesIntervalComplete = false;
+
+              // Send a bounce packet once every five minutes or so
+              const currentTime = new Date().getTime();
+              if (currentTime > (lastBounce + 300000)){
+                if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                  lastBounce = currentTime;
+                  serverSocket.send(JSON.stringify([{
+                    cmd: 'Bounce',
+                    slots: [playerSlot],
+                    data: currentTime,
+                  }]));
+                }
+              }
 
               // Fetch game mode
               const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
@@ -500,6 +514,11 @@ const connectToServer = (address) => {
             localStorage.setItem('dataPackage', JSON.stringify(command.data));
           }
           buildItemAndLocationData(command.data);
+          break;
+
+        case 'Bounced':
+          // This is a response to a makeshift keep-alive packet requested every five minutes.
+          // Nothing needs to be done in response to this message
           break;
 
         default:
