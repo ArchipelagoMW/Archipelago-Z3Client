@@ -102,7 +102,7 @@ const connectToServer = (address) => {
             game: 'A Link to the Past',
             name: btoa(new TextDecoder().decode(romName)), // Base64 encoded rom name
             uuid: getClientId(),
-            tags: ['LttP Client'],
+            tags: ['Z3 Client'],
             password: null, // TODO: Handle password protected lobbies
             version: SUPPORTED_ARCHIPELAGO_VERSION,
           };
