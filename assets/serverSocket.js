@@ -7,7 +7,6 @@ let reconnectAttempts = 0;
 // Control variable for the SNES watcher. Contains an interval (see MDN: setInterval)
 let snesInterval = null;
 let snesIntervalComplete = true;
-let reconnectInterval = null;
 let lastBounce = 0;
 
 // Location Ids provided by the server
@@ -115,10 +114,6 @@ const connectToServer = (address) => {
 
           // Reset reconnection info if necessary
           reconnectAttempts = 0;
-          if (reconnectInterval) {
-            clearInterval(reconnectInterval);
-            reconnectInterval = null;
-          }
 
           // Store the reported location check data from the server. They are arrays of locationIds
           checkedLocations = command.checked_locations;
@@ -547,7 +542,7 @@ const connectToServer = (address) => {
       if (serverSocket && serverSocket.readyState === WebSocket.OPEN) { return; }
 
       // If the socket was closed in response to an auth error, do not reconnect
-      if (serverAuthError) { return }
+      if (serverAuthError) { return; }
 
       // Do not exceed the limit of reconnection attempts
       if (++reconnectAttempts > maxReconnectAttempts) {
