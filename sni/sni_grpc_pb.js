@@ -312,6 +312,28 @@ function deserialize_ResetSystemResponse(buffer_arg) {
   return sni_pb.ResetSystemResponse.deserializeBinary(new Uint8Array(buffer_arg));
 }
 
+function serialize_ResetToMenuRequest(arg) {
+  if (!(arg instanceof sni_pb.ResetToMenuRequest)) {
+    throw new Error('Expected argument of type ResetToMenuRequest');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_ResetToMenuRequest(buffer_arg) {
+  return sni_pb.ResetToMenuRequest.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
+function serialize_ResetToMenuResponse(arg) {
+  if (!(arg instanceof sni_pb.ResetToMenuResponse)) {
+    throw new Error('Expected argument of type ResetToMenuResponse');
+  }
+  return Buffer.from(arg.serializeBinary());
+}
+
+function deserialize_ResetToMenuResponse(buffer_arg) {
+  return sni_pb.ResetToMenuResponse.deserializeBinary(new Uint8Array(buffer_arg));
+}
+
 function serialize_SingleReadMemoryRequest(arg) {
   if (!(arg instanceof sni_pb.SingleReadMemoryRequest)) {
     throw new Error('Expected argument of type SingleReadMemoryRequest');
@@ -389,6 +411,18 @@ resetSystem: {
     requestDeserialize: deserialize_ResetSystemRequest,
     responseSerialize: serialize_ResetSystemResponse,
     responseDeserialize: deserialize_ResetSystemResponse,
+  },
+  // only available if DeviceCapability ResetToMenu is present
+resetToMenu: {
+    path: '/DeviceControl/ResetToMenu',
+    requestStream: false,
+    responseStream: false,
+    requestType: sni_pb.ResetToMenuRequest,
+    responseType: sni_pb.ResetToMenuResponse,
+    requestSerialize: serialize_ResetToMenuRequest,
+    requestDeserialize: deserialize_ResetToMenuRequest,
+    responseSerialize: serialize_ResetToMenuResponse,
+    responseDeserialize: deserialize_ResetToMenuResponse,
   },
   // only available if DeviceCapability PauseUnpauseEmulation is present
 pauseUnpauseEmulation: {
