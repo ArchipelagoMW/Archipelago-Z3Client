@@ -17,6 +17,7 @@ const SUPPORTED_ARCHIPELAGO_VERSION = {
 const DEFAULT_SERVER_PORT = 38281;
 let serverSocket = null;
 let lastServerAddress = null;
+let serverPassword = null;
 let serverAuthError = false;
 
 // Players in the current game, received from Connected server packet

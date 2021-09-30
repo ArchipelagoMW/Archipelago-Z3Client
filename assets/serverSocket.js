@@ -42,7 +42,7 @@ window.addEventListener('load', () => {
   });
 });
 
-const connectToServer = (address) => {
+const connectToServer = (address, password = null) => {
   if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
     serverSocket.close();
     serverSocket = null;
@@ -58,6 +58,9 @@ const connectToServer = (address) => {
   let serverAddress = address;
   if (serverAddress.search(/^\/connect /) > -1) { serverAddress = serverAddress.substring(9); }
   if (serverAddress.search(/:\d+$/) === -1) { serverAddress = `${serverAddress}:${DEFAULT_SERVER_PORT}`;}
+
+  // Store the password, if given
+  serverPassword = password;
 
   // Attempt to connect to the server
   serverSocket = new WebSocket(`ws://${serverAddress}`);
@@ -102,7 +105,7 @@ const connectToServer = (address) => {
             name: btoa(new TextDecoder().decode(romName)), // Base64 encoded rom name
             uuid: getClientId(),
             tags: ['Z3 Client'],
-            password: null, // TODO: Handle password protected lobbies
+            password: serverPassword,
             version: SUPPORTED_ARCHIPELAGO_VERSION,
           };
           serverSocket.send(JSON.stringify([connectionData]));
@@ -428,7 +431,14 @@ const connectToServer = (address) => {
           serverStatus.innerText = 'Not Connected';
           serverStatus.classList.add('disconnected');
           if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
-            appendConsoleMessage(`Error while connecting to AP server: ${command.errors.join(', ')}.`);
+            if (command.errors.includes('InvalidPassword')) {
+              appendConsoleMessage(serverPassword === null ?
+                'A password is required to connect to the server. Please use /connect [server] [password]' :
+                'The password you provided was rejected by the server.'
+              );
+            } else {
+              appendConsoleMessage(`Error while connecting to AP server: ${command.errors.join(', ')}.`);
+            }
             serverAuthError = true;
             serverSocket.close();
           }
@@ -553,7 +563,7 @@ const connectToServer = (address) => {
 
       appendConsoleMessage(`Connection to AP server lost. Attempting to reconnect ` +
         `(${reconnectAttempts} of ${maxReconnectAttempts})`);
-      connectToServer(address);
+      connectToServer(address, serverPassword);
     }, 5000);
   };
 

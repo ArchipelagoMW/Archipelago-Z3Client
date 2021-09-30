@@ -43,10 +43,16 @@ window.addEventListener('load', () => {
           break;
 
         case '/connect':
+          if (snesDevice === null) {
+            appendConsoleMessage('A SNES device must be connected before a server connection can be established.');
+            return;
+          }
+
           commandParts.shift();
-          const address = commandParts.join(' ');
+          const address = commandParts[0];
+          const password = commandParts[1] || null;
           document.getElementById('server-address').value = address;
-          connectToServer(address);
+          connectToServer(address, password);
           break;
 
         case '/launcher':

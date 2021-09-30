@@ -14,7 +14,7 @@ window.addEventListener('load', async () => {
 
     snesDevice = parseInt(event.target.value, 10);
     await setSnesDevice(event.target.value);
-    if (lastServerAddress) { connectToServer(lastServerAddress); }
+    if (lastServerAddress) { connectToServer(lastServerAddress, serverPassword); }
   });
 
   // If the user presses the refresh button, reset the SNES connection entirely
@@ -26,7 +26,7 @@ window.addEventListener('load', async () => {
     sharedData = data;
     if (sharedData.hasOwnProperty('apServerAddress')) {
       document.getElementById('server-address').value = sharedData.apServerAddress;
-      connectToServer(sharedData.apServerAddress);
+      connectToServer(sharedData.apServerAddress, serverPassword);
     }
   });
 });
@@ -79,7 +79,7 @@ const initializeSNIConnection = async (requestedDevice = null) => {
     await setSnesDevice(0);
 
     // If the client was previously connected to an AP server, attempt to reconnect to it
-    if (lastServerAddress) { connectToServer(lastServerAddress); }
+    if (lastServerAddress) { connectToServer(lastServerAddress, serverPassword); }
   }
 };
 
