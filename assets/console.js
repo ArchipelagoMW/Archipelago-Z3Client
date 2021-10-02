@@ -1,5 +1,6 @@
 let cachedCommands = [];
 const maxCachedCommands = 10;
+const maxConsoleMessages = 500;
 let commandCursor = 0;
 
 window.addEventListener('load', () => {
@@ -38,10 +39,6 @@ window.addEventListener('load', () => {
     if (event.target.value[0] === '/') {
       const commandParts = event.target.value.split(' ');
       switch (commandParts[0]) {
-        case '/sync':
-          serverSync();
-          break;
-
         case '/connect':
           if (snesDevice === null) {
             appendConsoleMessage('A SNES device must be connected before a server connection can be established.');
@@ -55,11 +52,6 @@ window.addEventListener('load', () => {
           connectToServer(address, password);
           break;
 
-        case '/launcher':
-          appendConsoleMessage('Opening dialog for launcher choice...');
-          window.ipc.send('setLauncher');
-          break;
-
         case '/fontsize':
           if (commandParts.length < 2) {
             appendConsoleMessage('You must specify a font size like: /fontsize 16');
@@ -67,14 +59,47 @@ window.addEventListener('load', () => {
           setFontSize(parseInt(commandParts[1]));
           break;
 
-        case '/shield':
-        case '/farrak': // A little something just for me
-          receiveShields ? disableReceivingShields() : enableReceivingShields();
+        case '/launcher':
+          appendConsoleMessage('Opening dialog for launcher choice...');
+          window.ipc.send('setLauncher');
+          break;
+
+        case 'locations':
+          if (checkedLocations.length === 0) {
+            return appendConsoleMessage('No locations have been checked yet.');
+          }
+
+          appendConsoleMessage('The following locations have been checked:');
+          checkedLocations.forEach((locationId) => {
+            appendConsoleMessage(locationsById[locationId]);
+          });
           break;
 
         case '/pause':
         case '/malmo': // For the memes
           receiveItems ? disableReceivingItems() : enableReceivingItems();
+          break;
+
+        case '/shield':
+        case '/farrak': // A little something just for me
+          receiveShields ? disableReceivingShields() : enableReceivingShields();
+          break;
+
+        case '/sync':
+          serverSync();
+          break;
+
+        // This command is not in alphabetical order because it's convenient to have it last
+        case '/help':
+          appendConsoleMessage('Available commands:');
+          appendConsoleMessage('/connect [server] [password] - Connect to an AP server with an optional password');
+          appendConsoleMessage('/fontsize [size] - Change the size of the font. 16 is default');
+          appendConsoleMessage('/launcher - Choose an emulator to launch ROMs with instead of the system default');
+          appendConsoleMessage('/locations - Print a list of all locations which have been checked');
+          appendConsoleMessage('/pause - Pause or resume receiving items from other players');
+          appendConsoleMessage('/shield - Replace shields received from other players with the "Nothing" item');
+          appendConsoleMessage('/sync - Force the client to synchronize with the AP server');
+          appendConsoleMessage('/help - Print this message');
           break;
 
         default:
@@ -100,8 +125,8 @@ window.addEventListener('load', () => {
 
 const appendConsoleMessage = (message) => {
   const monitor = document.getElementById('console-output-wrapper');
-  // Remember only the last 250 messages
-  while (monitor.children.length >= 250) {
+  // Do not exceed the maximum number of displayed console messages
+  while (monitor.children.length >= maxConsoleMessages) {
     monitor.removeChild(monitor.firstChild);
   }
 
@@ -115,8 +140,8 @@ const appendConsoleMessage = (message) => {
 
 const appendFormattedConsoleMessage = (messageParts) => {
   const monitor = document.getElementById('console-output-wrapper');
-  // Remember only the last 250 messages
-  while (monitor.children.length >= 250) {
+  // Do not exceed the maximum number of displayed console messages
+  while (monitor.children.length >= maxConsoleMessages) {
     monitor.removeChild(monitor.firstChild);
   }
 
