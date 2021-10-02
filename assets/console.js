@@ -64,14 +64,22 @@ window.addEventListener('load', () => {
           window.ipc.send('setLauncher');
           break;
 
-        case 'locations':
+        case '/locations':
           if (checkedLocations.length === 0) {
-            return appendConsoleMessage('No locations have been checked yet.');
+            appendConsoleMessage('No locations have been checked yet.');
+            break;
           }
 
+          // Build a flat map of locations
+          let locationFlatMap = {};
+          Object.values(locationsById).forEach((locationMap) => {
+            locationFlatMap = Object.assign(locationFlatMap, locationMap);
+          });
+
+          // Print all checked locations to console
           appendConsoleMessage('The following locations have been checked:');
           checkedLocations.forEach((locationId) => {
-            appendConsoleMessage(locationsById[locationId]);
+            appendConsoleMessage(locationFlatMap[locationId].name);
           });
           break;
 
@@ -121,6 +129,11 @@ window.addEventListener('load', () => {
     // Clear the input box
     commandInput.value = '';
   });
+
+  const consoleWindow = document.getElementById('console-output-wrapper');
+  consoleWindow.addEventListener('scroll', (evt) => {
+    autoScrollPaused = (consoleWindow.scrollTop + consoleWindow.offsetHeight) < consoleWindow.scrollHeight;
+  });
 });
 
 const appendConsoleMessage = (message) => {
@@ -135,7 +148,7 @@ const appendConsoleMessage = (message) => {
   messageDiv.classList.add('console-output');
   messageDiv.innerText = message;
   monitor.appendChild(messageDiv);
-  messageDiv.scrollIntoView(false);
+  if (!autoScrollPaused) { messageDiv.scrollIntoView(false); }
 };
 
 const appendFormattedConsoleMessage = (messageParts) => {
@@ -179,11 +192,10 @@ const appendFormattedConsoleMessage = (messageParts) => {
 
   // Append the message div to the monitor
   monitor.appendChild(messageDiv);
-  messageDiv.scrollIntoView(false);
+  if (!autoScrollPaused) { messageDiv.scrollIntoView(false); }
 };
 
 const cacheCommand = (command) => {
-  appendConsoleMessage(`Command: ${command}`)
   // Limit stored command count to five
   while (cachedCommands.length > maxCachedCommands) { cachedCommands.shift(); }
 

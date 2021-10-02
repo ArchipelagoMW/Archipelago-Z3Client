@@ -55,3 +55,6 @@ let receiveItems = true;
 // For those who hate shields
 const shieldNames = ['Blue Shield', 'Red Shield', 'Mirror Shield', 'Progressive Shield'];
 let receiveShields = true;
+
+// Tracks if automatic scrolling is currently paused
+let autoScrollPaused = false;
