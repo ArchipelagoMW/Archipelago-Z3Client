@@ -81,10 +81,8 @@ const connectToServer = (address, password = null) => {
           // Update sidebar with info from the server
           document.getElementById('server-version').innerText =
             `${command.version.major}.${command.version.minor}.${command.version.build}`;
-          document.getElementById('forfeit-mode').innerText =
-            command.forfeit_mode[0].toUpperCase() + command.forfeit_mode.substring(1).toLowerCase();
-          document.getElementById('remaining-mode').innerText =
-            command.remaining_mode[0].toUpperCase() + command.remaining_mode.substring(1).toLowerCase();
+          document.getElementById('forfeit-mode').innerText = permissionMap[command.permissions.forfeit];
+          document.getElementById('remaining-mode').innerText = permissionMap[command.permissions.remaining];
           hintCost = Number(command.hint_cost);
           document.getElementById('points-per-check').innerText = command.location_check_points.toString();
 
@@ -106,7 +104,7 @@ const connectToServer = (address, password = null) => {
             uuid: getClientId(),
             tags: ['Z3 Client'],
             password: serverPassword,
-            version: SUPPORTED_ARCHIPELAGO_VERSION,
+            version: ARCHIPELAGO_PROTOCOL_VERSION,
           };
           serverSocket.send(JSON.stringify([connectionData]));
           break;

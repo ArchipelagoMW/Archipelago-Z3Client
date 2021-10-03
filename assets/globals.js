@@ -2,14 +2,14 @@
 const CLIENT_VERSION = {
   state: 'Beta',
   major: 0,
-  minor: 15,
+  minor: 16,
   patch: 0,
 };
 
-const SUPPORTED_ARCHIPELAGO_VERSION = {
+const ARCHIPELAGO_PROTOCOL_VERSION = {
   major: 0,
   minor: 1,
-  build: 8,
+  build: 9,
   class: 'Version',
 };
 
@@ -19,6 +19,14 @@ let serverSocket = null;
 let lastServerAddress = null;
 let serverPassword = null;
 let serverAuthError = false;
+
+const permissionMap = {
+  0: 'Disabled',
+  1: 'Enabled',
+  2: 'Goal',
+  6: 'Auto',
+  7: 'Enabled + Auto',
+};
 
 // Players in the current game, received from Connected server packet
 let playerSlot = null;
