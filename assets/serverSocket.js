@@ -233,7 +233,11 @@ const connectToServer = (address, password = null) => {
                 // Tell the SNES the id of the player who sent the item
                 const senderData = new Uint8Array(1);
                 senderData.set([
-                  (playerSlot === itemsReceived[romItemsReceived].player) ? 0 : itemsReceived[romItemsReceived].player
+                  // Because LttP can only hold 255 player names, if the sending player's ID is greater
+                  // than 255, we always send 255. Player 255 is always written to the ROM as "Archipelago"
+                  (playerSlot === itemsReceived[romItemsReceived].player) ? 0 : (
+                    Math.min(itemsReceived[romItemsReceived].player, 255)
+                  )
                 ]);
                 await writeToAddress(RECEIVED_ITEM_SENDER_ADDRESS, senderData);
               }
