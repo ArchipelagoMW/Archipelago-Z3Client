@@ -79,7 +79,7 @@ if (require('electron-squirrel-startup')) {
   if (process.platform === 'win32') {
     // Prepare to add registry entries for .apbp files
     const Registry = require('winreg');
-    const exePath = path.join(process.env.LOCALAPPDATA, 'Archipelago-Z3Client', 'Archipelago-Z3Client.exe');
+    const exePath = path.join(process.env.LOCALAPPDATA, 'Z3Client', 'Z3Client.exe');
 
     // Set file type description for .apbp files
     const descriptionKey = new Registry({
