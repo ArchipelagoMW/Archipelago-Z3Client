@@ -14,26 +14,26 @@ let lastSNILaunchAttempt = 0;
 
 // Determine user's config file path based on OS
 const configDir = (process.platform === 'win32') ?
-  path.join(process.env.APPDATA, 'z3client') : // Windows
-  path.join(os.homedir(), '.z3client'); // Mac + Linux
+  path.join(process.env.APPDATA, 'z3client-info') : // Windows
+  path.join(os.homedir(), '.z3client-info'); // Mac + Linux
 if (!fs.existsSync(configDir)) { fs.mkdirSync(configDir, { recursive: true }); }
 const configPath = path.join(configDir, 'z3client.config.json');
 
 // Determine user's log directory based on OS
 const logDir = (process.platform === 'win32') ?
-  path.join(process.env.APPDATA, 'z3client', 'logs') : // Windows
-  path.join(os.homedir(), '.z3client', 'logs'); // Mac + Linux
+  path.join(process.env.APPDATA, 'z3client-info', 'logs') : // Windows
+  path.join(os.homedir(), '.z3client-info', 'logs'); // Mac + Linux
 if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir, { recursive: true }); }
 
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
-  const logFile = createLogFile();
-  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
+  const uncaughtLogFile = createLogFile();
+  fs.writeSync(uncaughtLogFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
+  fs.closeSync(uncaughtLogFile);
 });
 
 // Function to create a log file
 const createLogFile = () => {
-  if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir); }
   return fs.openSync(path.join(logDir, `${new Date().getTime()}.txt`), 'w');
 }
 
@@ -135,14 +135,16 @@ const createWindow = () => {
   });
 
   win.loadFile('index.html').catch((error) => {
-    console.log(JSON.stringify(error));
-    fs.writeFileSync(logFile, `[${new Date.toLocaleString()}] ${JSON.stringify(error)}`);
+    console.log(error);
+    fs.writeSync(logFile, `[${new Date.toLocaleString()}] chromium: ${JSON.stringify(error)}`);
   });
 };
 
 app.whenReady().then(async () => {
   // Create the local config file if it does not exist
-  if (!fs.existsSync(configPath)) { fs.writeFileSync(configPath, ''); }
+  if (!fs.existsSync(configPath)) {
+    fs.writeFileSync(configPath, JSON.stringify({}));
+  }
 
   // Load the config into memory
   const config = JSON.parse(fs.readFileSync(configPath).toString());
@@ -220,7 +222,7 @@ app.whenReady().then(async () => {
   });
 }).catch((error) => {
   // Write error to log
-  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
+  fs.writeSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}\n`);
 });
 
 // Launch SNI if it is not running
@@ -257,8 +259,9 @@ try{
   ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
   ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
 
-  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
-  ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
+  fs.writeSync(logFile, `[${new Date().toLocaleString()}] Log begins.\n`);
+  ipcMain.handle('writeToLog', (event, data) =>
+    fs.writeSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
 }catch(error){
-  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}`);
+  fs.writeSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}`);
 }

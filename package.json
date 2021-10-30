@@ -1,5 +1,5 @@
 {
-  "name": "archipelago-z3client",
+  "name": "z3client",
   "version": "0.16.2",
   "author": "Chris Wilson",
   "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
@@ -11,13 +11,13 @@
     "package": "electron-forge package",
     "make": "electron-forge make"
   },
-  "homepage": "https://github.com/LegendaryLinux/Archipelago-Z3Client#readme",
+  "homepage": "https://github.com/ArchipelagoMW/Z3Client#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/LegendaryLinux/Archipelago-Z3Client.git"
+    "url": "git+https://github.com/ArchipelagoMW/Z3Client.git"
   },
   "bugs": {
-    "url": "https://github.com/LegendaryLinux/Archipelago-Z3Client/issues"
+    "url": "https://github.com/ArchipelagoMW/Z3Client/issues"
   },
   "dependencies": {
     "@grpc/grpc-js": "^1.3.7",
