@@ -136,7 +136,7 @@ const createWindow = () => {
 
   win.loadFile('index.html').catch((error) => {
     console.log(error);
-    fs.writeSync(logFile, `[${new Date.toLocaleString()}] chromium: ${JSON.stringify(error)}`);
+    fs.writeSync(logFile, `[${new Date.toLocaleString()}] ${JSON.stringify(error)}`);
   });
 };
 
