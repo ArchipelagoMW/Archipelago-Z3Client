@@ -1,6 +1,6 @@
 {
   "name": "z3client",
-  "version": "0.16.2",
+  "version": "0.17.0",
   "author": "Chris Wilson",
   "description": "A Z3 client designed to replace the old Python Z3 client in the Archipelago MultiWorld ecosystem.",
   "license": "MIT",
@@ -8,8 +8,10 @@
   "scripts": {
     "start": "electron .",
     "electron-rebuild": "electron-rebuild",
-    "package": "electron-forge package",
-    "make": "electron-forge make"
+    "package-win": "electron-forge package --platform win32 --arch x64",
+    "make-win": "electron-forge make --platform win32 --arch x64",
+    "package-linux": "electron-forge package --platform linux --arch x64",
+    "make-linux": "electron-forge make --platform linux --arch x64"
   },
   "homepage": "https://github.com/ArchipelagoMW/Z3Client#readme",
   "repository": {

@@ -19,7 +19,7 @@ to drag the `.apbp` file onto the executable in order to patch your game.
 2. If prompted, select your base ROM file for LttP.
 3. A patched ROM is created automatically in the same location as the patch file.
 4. Your emulator is launched automatically, and the ROM file is loaded.
-5. Run the appropriate LUA file, called `Connector.lua`, which is available on the
+5. Run the appropriate LUA file, called `sniConnector.lua`, which is available on the
    [releases](https://github.com/ArchipelagoMW/Z3Client/releases) page.
 6. Observe the client will automatically find and select your device.
 7. Enter the address of the Archipelago server into the *Server* box on the client, and press Enter.
@@ -39,8 +39,8 @@ to drag the `.apbp` file onto the executable in order to patch your game.
 I am writing this using the latest version of Node.js, but you might be able to get away with using the current LTS version.
 ```bash
 git clone https://github.com/ArchipelagoMW/Z3Client
-cd Archipelago-Z3Client
+cd Z3Client
 npm install
-electron-rebuild
-electron .
+npm run electron-rebuild
+npm run start
 ```
