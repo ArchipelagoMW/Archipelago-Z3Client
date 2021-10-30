@@ -1,5 +1,6 @@
 const { app, BrowserWindow, dialog, ipcMain } = require('electron');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const lzma = require('lzma-native');
 const yaml = require('js-yaml');
@@ -11,6 +12,10 @@ const SNI = require('./SNI');
 // Control variable for SNI to prevent multiple rapid launches
 let lastSNILaunchAttempt = 0;
 
+// Determine user's config directory based on OS
+const configDir = (process.platform === 'win32') ? process.env.APPDATA : path.join(os.homedir(), '.z3client');
+const configPath = path.join(configDir, 'z3client.config.json');
+
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
   const logFile = createLogFile();
@@ -19,10 +24,10 @@ process.on('uncaughtException', (error) => {
 
 // Function to create a log file
 const createLogFile = () => {
-  if (!fs.existsSync(path.join(process.env.APPDATA, 'z3client-logs'))) {
-    fs.mkdirSync(path.join(process.env.APPDATA, 'z3client-logs'));
+  if (!fs.existsSync(path.join(os.homedir(), 'z3client-logs'))) {
+    fs.mkdirSync(path.join(os.homedir(), 'z3client-logs'));
   }
-  return fs.openSync(path.join(process.env.APPDATA, 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+  return fs.openSync(path.join(os.homedir(), 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
 }
 
 // Create log file for this run
@@ -36,9 +41,28 @@ const launchSNI = () => {
   // Analyze the process list and launch SNI if necessary
   lastSNILaunchAttempt = new Date().getTime();
   const exec = require('child_process').exec;
-  exec('tasklist', (err, stdout, stderr) => {
-    if (stdout.search('sni.exe') === -1) {
-      childProcess.spawn(path.join(__dirname, 'sni', 'sni.exe'), { detached: true });
+  let cmd = null;
+  let sniBinary = null;
+  switch(process.platform){
+    case 'win32':
+      cmd = 'tasklist';
+      sniBinary = 'sni.exe';
+      break;
+    case 'linux':
+      cmd = 'ps -A';
+      sniBinary = 'sni-linux';
+      break;
+    case 'darwin':
+      cmd = 'ps -ax';
+      sniBinary = 'sni-darwin';
+      break;
+    default:
+      return;
+  }
+
+  exec(cmd, (err, stdout, stderr) => {
+    if (stdout.toLowerCase().indexOf(sniBinary) === -1) {
+      childProcess.spawn(path.join(__dirname, 'sni', sniBinary), { detached: true });
     }
   });
 };
@@ -108,7 +132,6 @@ const createWindow = () => {
 
 app.whenReady().then(async () => {
   // Create the local config file if it does not exist
-  const configPath = path.join(process.env.APPDATA, 'z3client.config.json');
   if (!fs.existsSync(configPath)) {
     fs.writeFileSync(configPath,JSON.stringify({}));
   }
@@ -201,7 +224,6 @@ ipcMain.on('requestSharedData', (event, args) => {
 });
 ipcMain.on('setLauncher', (event, args) => {
   // Allow the user to specify a program to launch the ROM
-  const configPath = path.join(process.env.APPDATA, 'z3client.config.json');
   const config = JSON.parse(fs.readFileSync(configPath).toString());
   const launcherPath = dialog.showOpenDialogSync({
     title: 'Locate ROM Launcher',
