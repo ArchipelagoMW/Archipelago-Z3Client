@@ -8,6 +8,9 @@ const childProcess = require('child_process');
 const md5 = require('md5');
 const SNI = require('./SNI');
 
+// Control variable for SNI to prevent multiple rapid launches
+let lastSNILaunchAttempt = 0;
+
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
   const logFile = createLogFile();
@@ -27,6 +30,11 @@ const logFile = createLogFile();
 
 // Function to launch SNI if it is not running
 const launchSNI = () => {
+  // If an attempt was made to launch SNI within the past three seconds, do nothing
+  if (new Date().getTime() < (lastSNILaunchAttempt + 3000)) { return; }
+
+  // Analyze the process list and launch SNI if necessary
+  lastSNILaunchAttempt = new Date().getTime();
   const exec = require('child_process').exec;
   exec('tasklist', (err, stdout, stderr) => {
     if (stdout.search('sni.exe') === -1) {

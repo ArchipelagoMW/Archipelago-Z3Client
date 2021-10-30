@@ -18,9 +18,12 @@ window.addEventListener('load', async () => {
   });
 
   // If the user presses the refresh button, reset the SNES connection entirely
-  document.getElementById('snes-device-refresh').addEventListener('click', async () => {
+  const snesRefreshButton = document.getElementById('snes-device-refresh');
+  const snesRefresh = async () => {
     await initializeSNIConnection();
-  });
+    snesRefreshButton.addEventListener('click', async () => await snesRefresh(), { once: true });
+  };
+  snesRefreshButton.addEventListener('click', async () => await snesRefresh(), { once: true });
 
   window.ipc.receive('sharedData', (data) => {
     sharedData = data;
@@ -32,54 +35,59 @@ window.addEventListener('load', async () => {
 });
 
 const initializeSNIConnection = async (requestedDevice = null) => {
-  const snesSelect = document.getElementById('snes-device');
-  snesSelect.setAttribute('disabled', '1');
+  try{
+    const snesSelect = document.getElementById('snes-device');
+    snesSelect.setAttribute('disabled', '1');
 
-  // Fetch available devices from SNI
-  await window.sni.launchSNI();
-  deviceList = await window.sni.fetchDevices();
+    // Fetch available devices from SNI
+    await window.sni.launchSNI();
+    deviceList = await window.sni.fetchDevices();
 
-  // Clear the current device list
-  while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
+    // Clear the current device list
+    while(snesSelect.firstChild) { snesSelect.removeChild(snesSelect.firstChild); }
 
-  // Add a "Select a device..." option
-  const neutralOption = document.createElement('option');
-  neutralOption.innerText = deviceList.length > 0 ? 'Select a device...' : 'Waiting for devices...';
-  neutralOption.setAttribute('value', '-1');
-  snesSelect.appendChild(neutralOption);
+    // Add a "Select a device..." option
+    const neutralOption = document.createElement('option');
+    neutralOption.innerText = deviceList.length > 0 ? 'Select a device...' : 'Waiting for devices...';
+    neutralOption.setAttribute('value', '-1');
+    snesSelect.appendChild(neutralOption);
 
-  // Add all SNES devices to the list
-  for (let device of deviceList) {
-    const deviceOption = document.createElement('option');
-    deviceOption.innerText = device.uri;
-    deviceOption.setAttribute('value', deviceList.indexOf(device));
-    if (deviceList.indexOf(device) === parseInt(requestedDevice, 10)) { deviceOption.selected = true; }
-    snesSelect.appendChild(deviceOption);
-  }
+    // Add all SNES devices to the list
+    for (let device of deviceList) {
+      const deviceOption = document.createElement('option');
+      deviceOption.innerText = device.uri;
+      deviceOption.setAttribute('value', deviceList.indexOf(device));
+      if (deviceList.indexOf(device) === parseInt(requestedDevice, 10)) { deviceOption.selected = true; }
+      snesSelect.appendChild(deviceOption);
+    }
 
-  // Enable the select list if there are devices available
-  if (deviceList.length > 0) {
-    snesSelect.removeAttribute('disabled');
-  }
+    // Enable the select list if there are devices available
+    if (deviceList.length > 0) {
+      snesSelect.removeAttribute('disabled');
+    }
 
-  // If no snes device is found, check for one every five seconds until one is found
-  if (deviceList.length === 0 ) {
-    return setTimeout(initializeSNIConnection, 5000);
-  }
+    // If no snes device is found, check for one every five seconds until one is found
+    if (deviceList.length === 0 ) {
+      return setTimeout(initializeSNIConnection, 5000);
+    }
 
-  // If the user requested a specific device, attach to it
-  if (requestedDevice) {
-    return await setSnesDevice(requestedDevice);
-  }
+    // If the user requested a specific device, attach to it
+    if (requestedDevice) {
+      return await setSnesDevice(requestedDevice);
+    }
 
-  // If only one device is available, connect to it
-  if (deviceList.length === 1) {
-    snesSelect.value = 0;
-    snesDevice = 0;
-    await setSnesDevice(0);
+    // If only one device is available, connect to it
+    if (deviceList.length === 1) {
+      snesSelect.value = 0;
+      snesDevice = 0;
+      await setSnesDevice(0);
 
-    // If the client was previously connected to an AP server, attempt to reconnect to it
-    if (lastServerAddress) { connectToServer(lastServerAddress, serverPassword); }
+      // If the client was previously connected to an AP server, attempt to reconnect to it
+      if (lastServerAddress) { connectToServer(lastServerAddress, serverPassword); }
+    }
+  }catch(error){
+    appendConsoleMessage(`An error occurred while initializing the SNI connection. Please check the error logs.`);
+    return window.logging.writeToLog(JSON.stringify(error));
   }
 };
 
