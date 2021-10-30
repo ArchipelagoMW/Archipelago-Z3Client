@@ -207,16 +207,21 @@ ipcMain.on('setLauncher', (event, args) => {
   }
 });
 
-// Interprocess communication with the renderer process related to SNI, all are synchronous events
-const sni = new SNI();
-sni.setAddressSpace(SNI.supportedAddressSpaces.FXPAKPRO); // We support communicating with FXPak devices
-sni.setMemoryMap(SNI.supportedMemoryMaps.LOROM); // ALttP uses LOROM
+try{
+  // Interprocess communication with the renderer process related to SNI, all are synchronous events
+  const sni = new SNI();
+  sni.setAddressSpace(SNI.supportedAddressSpaces.FXPAKPRO); // We support communicating with FXPak devices
+  sni.setMemoryMap(SNI.supportedMemoryMaps.LOROM); // ALttP uses LOROM
 
-ipcMain.handle('launchSNI', launchSNI);
-ipcMain.handle('fetchDevices', sni.fetchDevices);
-ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
-ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
-ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
+  ipcMain.handle('launchSNI', launchSNI);
+  ipcMain.handle('fetchDevices', sni.fetchDevices);
+  ipcMain.handle('setDevice', (event, device) => sni.setDevice.apply(sni, [device]));
+  ipcMain.handle('readFromAddress', (event, args) => sni.readFromAddress.apply(sni, args));
+  ipcMain.handle('writeToAddress', (event, args) => sni.writeToAddress.apply(sni, args));
 
-fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
-ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
+  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
+  ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
+}catch(error){
+  console.log('Handled error:');
+  console.log(error);
+}
