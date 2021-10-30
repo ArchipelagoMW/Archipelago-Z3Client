@@ -130,14 +130,15 @@ const createWindow = () => {
     },
   });
 
-  win.loadFile('index.html');
+  win.loadFile('index.html').catch((error) => {
+    console.log(JSON.stringify(error));
+    fs.writeFileSync(logFile, `[${new Date.toLocaleString()}] ${JSON.stringify(error)}`);
+  });
 };
 
 app.whenReady().then(async () => {
   // Create the local config file if it does not exist
-  if (!fs.existsSync(configPath)) {
-    fs.writeFileSync(configPath,JSON.stringify({}));
-  }
+  if (!fs.existsSync(configPath)) { fs.writeFileSync(configPath, ''); }
 
   // Load the config into memory
   const config = JSON.parse(fs.readFileSync(configPath).toString());
