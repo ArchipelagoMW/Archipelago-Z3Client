@@ -12,9 +12,14 @@ const SNI = require('./SNI');
 // Control variable for SNI to prevent multiple rapid launches
 let lastSNILaunchAttempt = 0;
 
-// Determine user's config directory based on OS
+// Determine user's config file path based on OS
 const configDir = (process.platform === 'win32') ? process.env.APPDATA : path.join(os.homedir(), '.z3client');
 const configPath = path.join(configDir, 'z3client.config.json');
+
+// Determine user's log directory based on OS
+const logDir = (process.platform === 'win32') ?
+  path.join(process.env.APPDATA, 'z3client-logs') :
+  path.join(os.homedir(), '.z3client-logs');
 
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
@@ -24,10 +29,8 @@ process.on('uncaughtException', (error) => {
 
 // Function to create a log file
 const createLogFile = () => {
-  if (!fs.existsSync(path.join(os.homedir(), 'z3client-logs'))) {
-    fs.mkdirSync(path.join(os.homedir(), 'z3client-logs'));
-  }
-  return fs.openSync(path.join(os.homedir(), 'z3client-logs', `${new Date().getTime()}.txt`), 'w');
+  if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir); }
+  return fs.openSync(path.join(logDir, `${new Date().getTime()}.txt`), 'w');
 }
 
 // Create log file for this run
