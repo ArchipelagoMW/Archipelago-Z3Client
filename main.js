@@ -13,13 +13,17 @@ const SNI = require('./SNI');
 let lastSNILaunchAttempt = 0;
 
 // Determine user's config file path based on OS
-const configDir = (process.platform === 'win32') ? process.env.APPDATA : path.join(os.homedir(), '.z3client');
+const configDir = (process.platform === 'win32') ?
+  process.env.APPDATA : // Windows
+  path.join(os.homedir(), '.z3client'); // Mac + Linux
+if (process.platform !== 'win32' && !fs.existsSync(configDir)) { fs.mkdirSync(configDir); }
 const configPath = path.join(configDir, 'z3client.config.json');
 
 // Determine user's log directory based on OS
 const logDir = (process.platform === 'win32') ?
-  path.join(process.env.APPDATA, 'z3client-logs') :
-  path.join(os.homedir(), '.z3client-logs');
+  path.join(process.env.APPDATA, 'z3client-logs') : // Windows
+  path.join(os.homedir(), '.z3client-logs'); // Mac + Linux
+if (!fs.existsSync(logDir)) { fs.mkdirSync(logDir); }
 
 // Catch and log any uncaught errors that occur in the main process
 process.on('uncaughtException', (error) => {
