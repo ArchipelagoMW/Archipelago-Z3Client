@@ -558,7 +558,6 @@ const connectToServer = (address, password = null) => {
 
     // If the user cleared the server address, do nothing
     const serverAddress = document.getElementById('server-address').value;
-    appendConsoleMessage(serverAddress);
     if (preventReconnect || !serverAddress) { return; }
 
     // If no SNES device is currently selected, do nothing
