@@ -230,6 +230,5 @@ try{
   fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] Log begins.`);
   ipcMain.handle('writeToLog', (event, data) => fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
 }catch(error){
-  console.log('Handled error:');
-  console.log(error);
+  fs.writeFileSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}`);
 }
