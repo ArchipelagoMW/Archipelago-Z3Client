@@ -156,14 +156,14 @@ app.whenReady().then(async () => {
     !fs.existsSync(config.baseRomPath) || // Base ROM no longer exists
     md5(fs.readFileSync(config.baseRomPath)) !== baseRomHash // The base ROM hash is wrong (user chose the wrong file)
   ) {
-    let baseRomPath = dialog.showOpenDialogSync(null, {
+    let baseRomPath = await dialog.showOpenDialog(null, {
       title: 'Select base ROM',
       buttonLabel: 'Choose ROM',
       message: 'Choose a base ROM to be used when patching.',
     });
     // Save base rom filepath back to config file
-    if (baseRomPath) {
-      config.baseRomPath = baseRomPath[0];
+    if (!baseRomPath.canceled && baseRomPath.filePaths.length > 0) {
+      config.baseRomPath = baseRomPath.filePaths[0];
       fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
         baseRomPath: config.baseRomPath,
       })));
@@ -232,17 +232,17 @@ launchSNI();
 ipcMain.on('requestSharedData', (event, args) => {
   event.sender.send('sharedData', sharedData);
 });
-ipcMain.on('setLauncher', (event, args) => {
+ipcMain.on('setLauncher', async (event, args) => {
   // Allow the user to specify a program to launch the ROM
   const config = JSON.parse(fs.readFileSync(configPath).toString());
-  const launcherPath = dialog.showOpenDialogSync({
+  const launcherPath = await dialog.showOpenDialog({
     title: 'Locate ROM Launcher',
     buttonLabel: 'Select Launcher',
     message: 'Choose an executable to be used when launching the ROM',
   });
-  if (launcherPath) {
+  if (!launcherPath.canceled && launcherPath.filePaths.length > 0) {
     fs.writeFileSync(configPath, JSON.stringify(Object.assign({}, config, {
-      launcherPath: launcherPath[0],
+      launcherPath: launcherPath.filePaths[0],
     })));
   }
 });
@@ -263,5 +263,6 @@ try{
   ipcMain.handle('writeToLog', (event, data) =>
     fs.writeSync(logFile, `[${new Date().toLocaleString()}] ${data}\n`));
 }catch(error){
+  console.log(error);
   fs.writeSync(logFile, `[${new Date().toLocaleString()}] ${JSON.stringify(error)}`);
 }
