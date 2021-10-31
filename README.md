@@ -42,5 +42,5 @@ git clone https://github.com/ArchipelagoMW/Z3Client
 cd Z3Client
 npm install
 npm run electron-rebuild
-npm run start
+npm run start [patchFile]
 ```
