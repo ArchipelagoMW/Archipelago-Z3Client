@@ -28,6 +28,12 @@ const CLIENT_STATUS = {
   CLIENT_GOAL: 30,
 };
 
+// Has DeathLink been enabled?
+let deathLinkEnabled = null;
+let lastForcedDeath = new Date().getTime(); // Tracks the last time a death was send or received over the network
+let linkIsDead = false;
+let linkIsStillDead = false;
+
 window.addEventListener('load', () => {
   // Handle server address change
   document.getElementById('server-address').addEventListener('keydown', async (event) => {
@@ -117,7 +123,7 @@ const connectToServer = (address, password = null) => {
             game: 'A Link to the Past',
             name: btoa(new TextDecoder().decode(romName)), // Base64 encoded rom name
             uuid: getClientId(),
-            tags: ['Z3 Client'],
+            tags: ['Z3 Client', 'DeathLink'],
             password: serverPassword,
             version: ARCHIPELAGO_PROTOCOL_VERSION,
           };
@@ -158,6 +164,10 @@ const connectToServer = (address, password = null) => {
           // Create an array containing only shopIds
           const shopIds = Object.values(SHOPS).map((shop) => shop.locationId);
 
+          // Determine if DeathLink is enabled
+          const deathLinkFlag = await readFromAddress(DEATH_LINK_ACTIVE_ADDR, 1);
+          deathLinkEnabled = parseInt(deathLinkFlag[0], 10) === 1;
+
           snesInterval = setInterval(async () => {
             try{
               // Prevent the interval from running concurrently with itself. If more than one iteration of this
@@ -187,10 +197,47 @@ const connectToServer = (address, password = null) => {
               const gameMode = await readFromAddress(WRAM_START + 0x10, 0x01);
               const modeValue = gameMode[0];
               // If game mode is unknown or not present, do not attempt to fetch or write data to the SNES
-              if (!modeValue || (INGAME_MODES.indexOf(modeValue) === -1 && ENDGAME_MODES.indexOf(modeValue) === -1)) {
+              if (!modeValue || (
+                !INGAME_MODES.includes(modeValue) &&
+                !ENDGAME_MODES.includes(modeValue) &&
+                !DEATH_MODES.includes(modeValue)
+              )) {
                 snesIntervalComplete = true;
                 return;
               }
+
+              // Check if DeathLink is enabled and Link is dead
+              if (deathLinkEnabled && linkIsDead) {
+                // Determine if link is currently dead, and therefore if he is able to be killed
+                if (!linkIsStillDead) { // Link is dead, and it just happened
+                  // Keep track of Link's state to prevent sending multiple DeathLink signals per death
+                  linkIsStillDead = true;
+
+                  // Check if it has been at least ten seconds since the last DeathLink network signal
+                  // was sent or received
+                  if (new Date().getTime() > (lastForcedDeath + 10000)) {
+                    if (serverSocket && serverSocket.readyState === WebSocket.OPEN) {
+                      // Link just died, so ignore DeathLink signals for the next ten seconds
+                      lastForcedDeath = new Date().getTime();
+                      serverSocket.send(JSON.stringify([{
+                        cmd: 'Bounce',
+                        tags: ['DeathLink'],
+                        data: {
+                          time: Math.floor(lastForcedDeath / 1000), // Unix Timestamp
+                          source: playerSlot, // Slot of the player who died
+                        },
+                      }]));
+                    }
+
+                    snesIntervalComplete = true;
+                    return;
+                  }
+                }
+              }
+
+              // Determine if Link is currently dead
+              linkIsDead = DEATH_MODES.includes(gameMode[0]);
+              if (!linkIsDead) { linkIsStillDead = false; }
 
               // Fetch game state and triforce information
               const gameOverScreenDisplayed = await readFromAddress(SAVEDATA_START + 0x443, 0x01);
@@ -539,8 +586,19 @@ const connectToServer = (address, password = null) => {
           break;
 
         case 'Bounced':
-          // This is a response to a makeshift keep-alive packet requested every five minutes.
-          // Nothing needs to be done in response to this message
+          // This command can be used for a variety of things. Currently, it is used for keep-alive and DeathLink.
+          // keep-alive packets can be safely ignored
+
+          // DeathLink handling
+          if (command.tags.includes('DeathLink')) {
+            if (command.data.source !== playerSlot) {
+              // Notify the player of the DeathLink occurrence, and who is to blame
+              const deadPlayer = players.find((player) =>
+                (player.team === playerTeam && player.slot === command.data.source)).alias;
+              appendConsoleMessage(`${deadPlayer} has died, and took you with them.`)
+              await killLink();
+            }
+          }
           break;
 
         default:

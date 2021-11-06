@@ -131,3 +131,23 @@ const writeToAddress = (hexOffset, data) => new Promise((resolve, reject) => {
       reject(err);
     });
 });
+
+/**
+ * Kill Link
+ * @returns {Promise<void>}
+ */
+const killLink = async () => {
+  // Set link as dead, so we don't accept any DeathLink packets
+  linkIsDead = linkIsStillDead = true;
+  lastForcedDeath = new Date().getTime();
+
+  // TODO: What is this writing, and what is normally stored at that address?
+  let killLinkPartOne = new Uint8Array(1);
+  killLinkPartOne.set([0]);
+  await writeToAddress(WRAM_START + 0xF36D, killLinkPartOne);
+
+  // TODO: What is this writing, and what is normally stored at that address?
+  let killLinkPartTwo = new Uint8Array(1);
+  killLinkPartTwo.set([8]);
+  await writeToAddress(WRAM_START + 0x0373, killLinkPartTwo);
+};

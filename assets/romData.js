@@ -8,9 +8,12 @@ const ROMNAME_SIZE = 0x15;
 
 const INGAME_MODES = [0x07, 0x09, 0x0b];
 const ENDGAME_MODES = [0x19, 0x1a];
+const DEATH_MODES = [0x12];
 
 const SAVEDATA_START = WRAM_START + 0xF000;
 const SAVEDATA_SIZE = 0x500;
+
+const DEATH_LINK_ACTIVE_ADDR = ROM_START + 0x18008D;
 
 // Received items are sent to the client as an array when it connects to the server. This array is sent in the
 // same order every time. To survive a client restart, the index of the last item sent to the SNES is stored in the ROM.
