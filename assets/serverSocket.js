@@ -591,7 +591,7 @@ const connectToServer = (address, password = null) => {
 
           // DeathLink handling
           if (command.tags.includes('DeathLink')) {
-            if (command.data.source !== playerSlot) {
+            if (deathLinkEnabled && (command.data.source !== playerSlot)) {
               // Notify the player of the DeathLink occurrence, and who is to blame
               const deadPlayer = players.find((player) =>
                 (player.team === playerTeam && player.slot === command.data.source)).alias;
