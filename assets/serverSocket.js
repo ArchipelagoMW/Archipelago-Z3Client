@@ -224,7 +224,8 @@ const connectToServer = (address, password = null) => {
                         tags: ['DeathLink'],
                         data: {
                           time: Math.floor(lastForcedDeath / 1000), // Unix Timestamp
-                          source: playerSlot, // Slot of the player who died
+                          source: players.find((player) =>
+                            (player.team === playerTeam) && (player.slot === playerSlot)).alias, // Local player alias
                         },
                       }]));
                     }
