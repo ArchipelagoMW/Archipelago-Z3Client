@@ -236,7 +236,7 @@ const connectToServer = (address, password = null) => {
               }
 
               // Determine if Link is currently dead
-              linkIsDead = DEATH_MODES.includes(gameMode[0]);
+              linkIsDead = DEATH_MODES.includes(modeValue);
               if (!linkIsDead) { linkIsStillDead = false; }
 
               // Fetch game state and triforce information
@@ -591,11 +591,12 @@ const connectToServer = (address, password = null) => {
 
           // DeathLink handling
           if (command.tags.includes('DeathLink')) {
-            if (deathLinkEnabled && (command.data.source !== playerSlot)) {
+            // Has it been at least ten seconds since the last time Link was forcibly killed?
+            if (deathLinkEnabled && (new Date().getTime() > (lastForcedDeath + 10000))) {
               // Notify the player of the DeathLink occurrence, and who is to blame
-              const deadPlayer = players.find((player) =>
-                (player.team === playerTeam && player.slot === command.data.source)).alias;
-              appendConsoleMessage(`${deadPlayer} has died, and took you with them.`)
+              appendConsoleMessage(`${command.data.source} has died, and took you with them.`)
+
+              // Kill Link
               await killLink();
             }
           }

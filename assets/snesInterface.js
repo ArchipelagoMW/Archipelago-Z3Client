@@ -134,6 +134,7 @@ const writeToAddress = (hexOffset, data) => new Promise((resolve, reject) => {
 
 /**
  * Kill Link
+ * https://www.youtube.com/watch?v=mSsOrOjfyvg&t=57s
  * @returns {Promise<void>}
  */
 const killLink = async () => {
@@ -141,12 +142,12 @@ const killLink = async () => {
   linkIsDead = linkIsStillDead = true;
   lastForcedDeath = new Date().getTime();
 
-  // TODO: What is this writing, and what is normally stored at that address?
+  // Set the current health value to zero
   let killLinkPartOne = new Uint8Array(1);
   killLinkPartOne.set([0]);
   await writeToAddress(WRAM_START + 0xF36D, killLinkPartOne);
 
-  // TODO: What is this writing, and what is normally stored at that address?
+  // Deal eight damage to Link
   let killLinkPartTwo = new Uint8Array(1);
   killLinkPartTwo.set([8]);
   await writeToAddress(WRAM_START + 0x0373, killLinkPartTwo);
